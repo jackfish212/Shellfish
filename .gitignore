@@ -1,0 +1,35 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+*.test.exe
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+.cursorindexingignore
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+NAME.md
+Tasks.md
+Task2.md
+.specstory/
