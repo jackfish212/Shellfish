@@ -180,20 +180,16 @@ func (s *Shell) executeLogicalOps(ctx context.Context, segments []logicalSegment
 	var output strings.Builder
 	var lastCode int
 
-	for i, seg := range segments {
+	for _, seg := range segments {
 		seg.cmd = strings.TrimSpace(seg.cmd)
 		if seg.cmd == "" {
 			continue
 		}
 
-		var redir *redirection
-		cmdPart := seg.cmd
-		if i == len(segments)-1 {
-			redir, cmdPart = parseRedirection(seg.cmd)
-			cmdPart = strings.TrimSpace(cmdPart)
-			if redir != nil {
-				cmdPart, redir.stderrToStdout = parseStderrToStdout(cmdPart)
-			}
+		redir, cmdPart := parseRedirection(seg.cmd)
+		cmdPart = strings.TrimSpace(cmdPart)
+		if redir != nil {
+			cmdPart, redir.stderrToStdout = parseStderrToStdout(cmdPart)
 		}
 
 		result := s.executeSingle(ctx, cmdPart, nil, redir)
