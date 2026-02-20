@@ -19,9 +19,11 @@ func (s *Shell) execEnv() map[string]string {
 }
 
 func (s *Shell) executeSingleStream(ctx context.Context, cmdLine string, stdin io.Reader) (io.ReadCloser, *ExecResult) {
+	// Expand command substitutions first (`cmd` or $(cmd))
+	cmdLine = s.expandCommandSubstitution(ctx, cmdLine)
 	cmdLine = s.expandEnvVars(cmdLine)
 
-	args := tokenize(cmdLine)
+	args, quoted := tokenizeWithQuoteInfo(cmdLine)
 	for i := range args {
 		args[i] = s.expandTilde(args[i])
 	}
@@ -29,7 +31,7 @@ func (s *Shell) executeSingleStream(ctx context.Context, cmdLine string, stdin i
 		return nil, &ExecResult{}
 	}
 	cmd := args[0]
-	cmdArgs := args[1:]
+	cmdArgs := s.expandGlobs(ctx, args[1:], quoted[1:])
 
 	switch cmd {
 	case "cd":
@@ -76,9 +78,11 @@ func (s *Shell) executeSingleStream(ctx context.Context, cmdLine string, stdin i
 
 func (s *Shell) executeSingle(ctx context.Context, cmdLine string, stdin io.Reader, redir *redirection) *ExecResult {
 	slog.Debug("executeSingle called", "cmdLine", cmdLine, "hasRedir", redir != nil)
+	// Expand command substitutions first (`cmd` or $(cmd))
+	cmdLine = s.expandCommandSubstitution(ctx, cmdLine)
 	cmdLine = s.expandEnvVars(cmdLine)
 
-	args := tokenize(cmdLine)
+	args, quoted := tokenizeWithQuoteInfo(cmdLine)
 	for i := range args {
 		args[i] = s.expandTilde(args[i])
 	}
@@ -86,7 +90,8 @@ func (s *Shell) executeSingle(ctx context.Context, cmdLine string, stdin io.Read
 		return &ExecResult{}
 	}
 	cmd := args[0]
-	cmdArgs := filterRedirectionArgs(args[1:])
+	cmdArgs, cmdQuoted := filterRedirectionArgsWithQuotes(args[1:], quoted[1:])
+	cmdArgs = s.expandGlobs(ctx, cmdArgs, cmdQuoted)
 
 	switch cmd {
 	case "cd":

@@ -308,6 +308,119 @@ func TestShellTildeExpansion(t *testing.T) {
 	}
 }
 
+// ─── Glob / Wildcard Expansion ───
+
+func TestShellGlobStar(t *testing.T) {
+	sh, v := setupShell(t)
+	ctx := context.Background()
+
+	v.Write(ctx, "/home/tester/a.txt", strings.NewReader("aaa"))
+	v.Write(ctx, "/home/tester/b.txt", strings.NewReader("bbb"))
+	v.Write(ctx, "/home/tester/c.log", strings.NewReader("ccc"))
+
+	result := sh.Execute(ctx, "echo *.txt")
+	got := strings.TrimSpace(result.Output)
+	if !strings.Contains(got, "a.txt") || !strings.Contains(got, "b.txt") {
+		t.Errorf("*.txt should match a.txt and b.txt, got %q", got)
+	}
+	if strings.Contains(got, "c.log") {
+		t.Errorf("*.txt should not match c.log, got %q", got)
+	}
+}
+
+func TestShellGlobQuestion(t *testing.T) {
+	sh, v := setupShell(t)
+	ctx := context.Background()
+
+	v.Write(ctx, "/home/tester/f1.txt", strings.NewReader(""))
+	v.Write(ctx, "/home/tester/f2.txt", strings.NewReader(""))
+	v.Write(ctx, "/home/tester/f10.txt", strings.NewReader(""))
+
+	result := sh.Execute(ctx, "echo f?.txt")
+	got := strings.TrimSpace(result.Output)
+	if !strings.Contains(got, "f1.txt") || !strings.Contains(got, "f2.txt") {
+		t.Errorf("f?.txt should match f1.txt and f2.txt, got %q", got)
+	}
+	if strings.Contains(got, "f10.txt") {
+		t.Errorf("f?.txt should not match f10.txt, got %q", got)
+	}
+}
+
+func TestShellGlobWithDir(t *testing.T) {
+	sh, v := setupShell(t)
+	ctx := context.Background()
+
+	v.Write(ctx, "/tmp/x.go", strings.NewReader(""))
+	v.Write(ctx, "/tmp/y.go", strings.NewReader(""))
+	v.Write(ctx, "/tmp/z.md", strings.NewReader(""))
+
+	result := sh.Execute(ctx, "echo /tmp/*.go")
+	got := strings.TrimSpace(result.Output)
+	if !strings.Contains(got, "/tmp/x.go") || !strings.Contains(got, "/tmp/y.go") {
+		t.Errorf("/tmp/*.go should match x.go and y.go, got %q", got)
+	}
+	if strings.Contains(got, "z.md") {
+		t.Errorf("/tmp/*.go should not match z.md, got %q", got)
+	}
+}
+
+func TestShellGlobQuotedNoExpand(t *testing.T) {
+	sh, v := setupShell(t)
+	ctx := context.Background()
+
+	v.Write(ctx, "/home/tester/a.txt", strings.NewReader(""))
+
+	result := sh.Execute(ctx, `echo "*.txt"`)
+	got := strings.TrimSpace(result.Output)
+	if got != "*.txt" {
+		t.Errorf("quoted glob should not expand, got %q", got)
+	}
+
+	result2 := sh.Execute(ctx, "echo '*.txt'")
+	got2 := strings.TrimSpace(result2.Output)
+	if got2 != "*.txt" {
+		t.Errorf("single-quoted glob should not expand, got %q", got2)
+	}
+}
+
+func TestShellGlobNoMatch(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, "echo *.zzz")
+	got := strings.TrimSpace(result.Output)
+	if got != "*.zzz" {
+		t.Errorf("unmatched glob should be kept as-is, got %q", got)
+	}
+}
+
+func TestShellGlobRelativeDir(t *testing.T) {
+	sh, v := setupShell(t)
+	ctx := context.Background()
+
+	v.Write(ctx, "/home/tester/sub/p.txt", strings.NewReader(""))
+	v.Write(ctx, "/home/tester/sub/q.txt", strings.NewReader(""))
+
+	result := sh.Execute(ctx, "echo sub/*.txt")
+	got := strings.TrimSpace(result.Output)
+	if !strings.Contains(got, "sub/p.txt") || !strings.Contains(got, "sub/q.txt") {
+		t.Errorf("sub/*.txt should expand with relative prefix, got %q", got)
+	}
+}
+
+func TestShellGlobWithPipe(t *testing.T) {
+	sh, v := setupShell(t)
+	ctx := context.Background()
+
+	v.Write(ctx, "/home/tester/data1.txt", strings.NewReader("hello\n"))
+	v.Write(ctx, "/home/tester/data2.txt", strings.NewReader("world\n"))
+
+	result := sh.Execute(ctx, "cat *.txt | head -n 1")
+	if result.Code != 0 {
+		t.Errorf("glob with pipe should succeed, got code %d: %s", result.Code, result.Output)
+	}
+}
+
 // ─── Here-Documents ───
 
 func TestShellHereDoc(t *testing.T) {
@@ -325,5 +438,94 @@ func TestShellHereDoc(t *testing.T) {
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "line1") || !strings.Contains(string(data), "line2") {
 		t.Errorf("heredoc content = %q", string(data))
+	}
+}
+
+// ─── Echo Options ───
+
+func TestShellEchoNoNewline(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, "echo -n hello")
+	if strings.HasSuffix(result.Output, "\n") {
+		t.Error("echo -n should not add trailing newline")
+	}
+	if result.Output != "hello" {
+		t.Errorf("echo -n output = %q, want %q", result.Output, "hello")
+	}
+}
+
+func TestShellEchoEscape(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, `echo -e "hello\tworld"`)
+	if !strings.Contains(result.Output, "\t") {
+		t.Errorf("echo -e should expand \\t, got: %q", result.Output)
+	}
+
+	result = sh.Execute(ctx, `echo -e "line1\nline2"`)
+	if !strings.Contains(result.Output, "\nline2") {
+		t.Errorf("echo -e should expand \\n, got: %q", result.Output)
+	}
+}
+
+func TestShellEchoCombinedOptions(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, `echo -ne "hello\tworld"`)
+	if strings.HasSuffix(result.Output, "\n") {
+		t.Error("echo -ne should not add trailing newline")
+	}
+	if !strings.Contains(result.Output, "\t") {
+		t.Errorf("echo -ne should expand \\t, got: %q", result.Output)
+	}
+}
+
+// ─── Command Substitution ───
+
+func TestShellCommandSubstitutionBacktick(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, "echo `echo hello`")
+	got := strings.TrimSpace(result.Output)
+	if got != "hello" {
+		t.Errorf("command substitution with backtick = %q, want %q", got, "hello")
+	}
+}
+
+func TestShellCommandSubstitutionDollar(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, "echo $(echo world)")
+	got := strings.TrimSpace(result.Output)
+	if got != "world" {
+		t.Errorf("command substitution with $() = %q, want %q", got, "world")
+	}
+}
+
+func TestShellCommandSubstitutionInString(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, `echo "prefix $(echo inner) suffix"`)
+	got := strings.TrimSpace(result.Output)
+	if got != "prefix inner suffix" {
+		t.Errorf("nested command substitution = %q, want %q", got, "prefix inner suffix")
+	}
+}
+
+func TestShellCommandSubstitutionPwd(t *testing.T) {
+	sh, _ := setupShell(t)
+	ctx := context.Background()
+
+	result := sh.Execute(ctx, "echo `pwd`")
+	got := strings.TrimSpace(result.Output)
+	if got != "/home/tester" {
+		t.Errorf("pwd substitution = %q, want %q", got, "/home/tester")
 	}
 }

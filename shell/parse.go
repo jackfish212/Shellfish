@@ -223,22 +223,35 @@ func parseStderrToStdout(s string) (string, bool) {
 }
 
 func tokenize(s string) []string {
+	tokens, _ := tokenizeWithQuoteInfo(s)
+	return tokens
+}
+
+// tokenizeWithQuoteInfo splits a command line into tokens and tracks whether
+// each token was (partially) quoted. Quoted tokens should not undergo glob expansion.
+func tokenizeWithQuoteInfo(s string) ([]string, []bool) {
 	var tokens []string
+	var quoted []bool
 	var current strings.Builder
 	inSingle := false
 	inDouble := false
+	wasQuoted := false
 
 	for i := 0; i < len(s); i++ {
 		ch := s[i]
 		switch {
 		case ch == '\'' && !inDouble:
 			inSingle = !inSingle
+			wasQuoted = true
 		case ch == '"' && !inSingle:
 			inDouble = !inDouble
+			wasQuoted = true
 		case (ch == ' ' || ch == '\t') && !inSingle && !inDouble:
 			if current.Len() > 0 {
 				tokens = append(tokens, current.String())
+				quoted = append(quoted, wasQuoted)
 				current.Reset()
+				wasQuoted = false
 			}
 		default:
 			current.WriteByte(ch)
@@ -246,6 +259,28 @@ func tokenize(s string) []string {
 	}
 	if current.Len() > 0 {
 		tokens = append(tokens, current.String())
+		quoted = append(quoted, wasQuoted)
 	}
-	return tokens
+	return tokens, quoted
+}
+
+func filterRedirectionArgsWithQuotes(args []string, quoted []bool) ([]string, []bool) {
+	var resultArgs []string
+	var resultQuoted []bool
+	for i := 0; i < len(args); i++ {
+		if args[i] == ">" || args[i] == ">>" || args[i] == "2>" || args[i] == "2>>" || args[i] == "&>" || args[i] == "&>>" {
+			i++
+			continue
+		}
+		if args[i] == "2>&1" {
+			continue
+		}
+		resultArgs = append(resultArgs, args[i])
+		if i < len(quoted) {
+			resultQuoted = append(resultQuoted, quoted[i])
+		} else {
+			resultQuoted = append(resultQuoted, false)
+		}
+	}
+	return resultArgs, resultQuoted
 }
