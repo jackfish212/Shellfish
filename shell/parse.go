@@ -206,7 +206,7 @@ func parseRedirection(s string) (*redirection, string) {
 		for i < len(s) && s[i] != ' ' && s[i] != '\t' {
 			i++
 		}
-		redir.path = s[start:i]
+		redir.path = strings.TrimSpace(s[start:i])
 		cmdPart := strings.TrimSpace(s[:operatorPos])
 		return &redir, cmdPart
 	}
