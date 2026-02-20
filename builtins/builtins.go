@@ -43,9 +43,9 @@ func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string
 		Description: "Cross-mount search",
 		Usage:       "search <query> [--scope <path>] [--max N]",
 	})
-	fs.AddExecFunc(prefix+"grep", builtinSearch(v), mounts.FuncMeta{
-		Description: "Cross-mount search",
-		Usage:       "grep <query> [--scope <path>] [--max N]",
+	fs.AddExecFunc(prefix+"grep", builtinGrep(v), mounts.FuncMeta{
+		Description: "Search for patterns in files",
+		Usage:       "grep [OPTIONS] PATTERN [FILE]...",
 	})
 	fs.AddExecFunc(prefix+"mount", builtinMount(v), mounts.FuncMeta{
 		Description: "List mount points",

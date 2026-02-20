@@ -510,7 +510,7 @@ func TestUnameAll(t *testing.T) {
 	}
 }
 
-// ─── grep (search with stdin) ───
+// ─── grep ───
 
 func TestGrepFromPipe(t *testing.T) {
 	_, sh := setupTestEnv(t)
@@ -520,6 +520,92 @@ func TestGrepFromPipe(t *testing.T) {
 	}
 	if strings.Contains(out, "hello") {
 		t.Errorf("grep should not include non-matching lines: %q", out)
+	}
+}
+
+func TestGrepFile(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep bar ~/notes.txt")
+	if !strings.Contains(out, "foo bar") {
+		t.Errorf("grep file should match 'foo bar': %q", out)
+	}
+	if strings.Contains(out, "hello") {
+		t.Errorf("grep should not include non-matching lines: %q", out)
+	}
+}
+
+func TestGrepMultipleFiles(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep bar ~/notes.txt ~/data.csv")
+	if !strings.Contains(out, "notes.txt:foo bar") {
+		t.Errorf("grep multiple files should show filename: %q", out)
+	}
+}
+
+func TestGrepIgnoreCase(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -i HELLO ~/notes.txt")
+	if !strings.Contains(out, "hello world") {
+		t.Errorf("grep -i should match case-insensitively: %q", out)
+	}
+}
+
+func TestGrepInvert(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -v bar ~/notes.txt")
+	if strings.Contains(out, "foo bar") {
+		t.Errorf("grep -v should not include matching lines: %q", out)
+	}
+	if !strings.Contains(out, "hello world") {
+		t.Errorf("grep -v should include non-matching lines: %q", out)
+	}
+}
+
+func TestGrepLineNumber(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -n bar ~/notes.txt")
+	if !strings.Contains(out, "2:foo bar") {
+		t.Errorf("grep -n should show line number: %q", out)
+	}
+}
+
+func TestGrepCount(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -c bar ~/notes.txt")
+	if !strings.Contains(out, "1") {
+		t.Errorf("grep -c should show count: %q", out)
+	}
+}
+
+func TestGrepRecursive(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -r bar ~")
+	if !strings.Contains(out, "bar") {
+		t.Errorf("grep -r should search recursively: %q", out)
+	}
+}
+
+func TestGrepRegex(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep 'f.*o' ~/notes.txt")
+	if !strings.Contains(out, "foo bar") {
+		t.Errorf("grep should support regex: %q", out)
+	}
+}
+
+func TestGrepNoMatch(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep nonexistent ~/notes.txt")
+	if out != "" && out != "\n" {
+		t.Errorf("grep with no match should return empty: %q", out)
+	}
+}
+
+func TestGrepHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "grep --help")
+	if code != 1 {
+		t.Errorf("grep --help should return exit code 1, got %d", code)
 	}
 }
 
