@@ -79,6 +79,10 @@ func registerAllBuiltins(v *afs.VirtualOS, fs *mounts.MemFS, prefix string) {
 		Description: "Move (rename) files",
 		Usage:       "mv <source> <dest>",
 	})
+	fs.AddExecFunc(prefix+"cp", builtinCp(v), mounts.FuncMeta{
+		Description: "Copy files",
+		Usage:       "cp [-r] <source> <dest>",
+	})
 	fs.AddExecFunc(prefix+"uname", builtinUname(), mounts.FuncMeta{
 		Description: "Print system information",
 		Usage:       "uname [-a|-s|-n|-r|-v|-m]",

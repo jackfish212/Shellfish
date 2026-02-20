@@ -335,6 +335,108 @@ func TestMvNoArgs(t *testing.T) {
 	}
 }
 
+// ─── cp ───
+
+func TestCpFile(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	run(t, sh, "cp ~/notes.txt ~/notes_copy.txt")
+
+	ctx := context.Background()
+	f, err := v.Open(ctx, "/home/tester/notes_copy.txt")
+	if err != nil {
+		t.Fatalf("copied file should exist: %v", err)
+	}
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	if !strings.Contains(string(data), "hello world") {
+		t.Errorf("copied content = %q", string(data))
+	}
+
+	// Original file should still exist
+	_, err = v.Stat(ctx, "/home/tester/notes.txt")
+	if err != nil {
+		t.Error("original file should still exist")
+	}
+}
+
+func TestCpToDirectory(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	run(t, sh, "cp ~/notes.txt ~/docs/")
+
+	ctx := context.Background()
+	f, err := v.Open(ctx, "/home/tester/docs/notes.txt")
+	if err != nil {
+		t.Fatalf("file copied to directory should exist: %v", err)
+	}
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	if !strings.Contains(string(data), "hello world") {
+		t.Errorf("copied content = %q", string(data))
+	}
+}
+
+func TestCpRecursive(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	run(t, sh, "mkdir ~/backup")
+	run(t, sh, "cp -r ~/docs ~/backup/")
+
+	ctx := context.Background()
+	f, err := v.Open(ctx, "/home/tester/backup/docs/readme.md")
+	if err != nil {
+		t.Fatalf("recursive copy should create nested file: %v", err)
+	}
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	if !strings.Contains(string(data), "README") {
+		t.Errorf("copied content = %q", string(data))
+	}
+}
+
+func TestCpDirWithoutRecursive(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "cp ~/docs ~/docs_copy")
+	if code == 0 {
+		t.Error("cp directory without -r should fail")
+	}
+}
+
+func TestCpNotFound(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "cp ~/nonexistent.txt ~/copy.txt")
+	if code == 0 {
+		t.Error("cp nonexistent should fail")
+	}
+}
+
+func TestCpNoArgs(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "cp")
+	if code == 0 {
+		t.Error("cp without args should fail")
+	}
+}
+
+func TestCpMultipleFiles(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	run(t, sh, "mkdir ~/dest")
+	run(t, sh, "cp ~/notes.txt ~/data.csv ~/dest/")
+
+	ctx := context.Background()
+	_, err1 := v.Stat(ctx, "/home/tester/dest/notes.txt")
+	_, err2 := v.Stat(ctx, "/home/tester/dest/data.csv")
+	if err1 != nil || err2 != nil {
+		t.Errorf("multiple files should be copied: err1=%v, err2=%v", err1, err2)
+	}
+}
+
+func TestCpHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "cp -h")
+	if !strings.Contains(out, "Usage") {
+		t.Errorf("cp -h should show help: %q", out)
+	}
+}
+
 // ─── find ───
 
 func TestFind(t *testing.T) {
