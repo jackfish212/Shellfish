@@ -33,8 +33,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const mem0BaseURL = "https://api.mem0.ai/v1"
-
 // Mem0HTTPClient implements mounts.MCPClient using Mem0 REST API
 type Mem0HTTPClient struct {
 	apiKey string
@@ -48,36 +46,6 @@ func NewMem0HTTPClient(apiKey, userID string) *Mem0HTTPClient {
 		userID: userID,
 		client: &http.Client{},
 	}
-}
-
-func (c *Mem0HTTPClient) do(method, path string, body any) ([]byte, error) {
-	var req *http.Request
-	var err error
-
-	if body != nil {
-		jsonBody, _ := json.Marshal(body)
-		req, err = http.NewRequest(method, mem0BaseURL+path, strings.NewReader(string(jsonBody)))
-	} else {
-		req, err = http.NewRequest(method, mem0BaseURL+path, nil)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Token "+c.apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var result json.RawMessage
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
-	}
-	return json.MarshalIndent(result, "", "  ")
 }
 
 // Implement MCPClient interface with static tool definitions
