@@ -32,6 +32,12 @@ func (v *VirtualOS) Watch(prefix string, mask EventType) *Watcher {
 	return v.hub.watch(prefix, mask)
 }
 
+// Notify emits a filesystem watch event. Use this for providers that generate
+// content autonomously (e.g., RSS polling, webhooks) and need to notify watchers.
+func (v *VirtualOS) Notify(evType EventType, path string) {
+	v.hub.emit(evType, CleanPath(path))
+}
+
 // Mount registers a Provider at the given path.
 func (v *VirtualOS) Mount(path string, p Provider) error {
 	path = CleanPath(path)
