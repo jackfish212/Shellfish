@@ -1,10 +1,10 @@
 # Create a Custom Provider
 
-This guide shows how to implement a custom AFS provider — a mountable data source that integrates into the virtual filesystem.
+This guide shows how to implement a custom Shellfish provider — a mountable data source that integrates into the virtual filesystem.
 
 ## Decide What to Implement
 
-AFS providers are built from composable interfaces. Start with the base `Provider`, then add capabilities as needed:
+Shellfish providers are built from composable interfaces. Start with the base `Provider`, then add capabilities as needed:
 
 | Interface | Methods | When to implement |
 |-----------|---------|-------------------|
@@ -169,6 +169,6 @@ $ mount
 ## Guidelines
 
 - **Return clean paths.** `Stat` and `List` receive paths relative to the mount point, with the leading `/` stripped. `""` means the mount root.
-- **Set `Perm` correctly.** AFS checks permissions before delegating to your provider. If an entry has `PermRO`, write attempts are rejected before reaching your code.
+- **Set `Perm` correctly.** Shellfish checks permissions before delegating to your provider. If an entry has `PermRO`, write attempts are rejected before reaching your code.
 - **Use `Meta` for provider-specific data.** The `Entry.Meta` map carries arbitrary key-value pairs. Use it for schema info, scores, tiers, or any metadata the agent might need.
 - **Be concurrent-safe.** Multiple shell instances may access your provider simultaneously. Use appropriate synchronization if your provider has mutable state.

@@ -1,6 +1,6 @@
 # Integration Strategy
 
-AFS is designed to be used from any language, any agent framework, through multiple protocols. This document explains the integration layers and how they connect AFS to the broader ecosystem.
+Shellfish is designed to be used from any language, any agent framework, through multiple protocols. This document explains the integration layers and how they connect Shellfish to the broader ecosystem.
 
 ## Overview
 
@@ -34,7 +34,7 @@ AFS is designed to be used from any language, any agent framework, through multi
 
 ## Layer 1: Go SDK (Direct Embedding)
 
-The most direct integration. Any Go program imports AFS as a library:
+The most direct integration. Any Go program imports Shellfish as a library:
 
 ```go
 import (
@@ -47,7 +47,7 @@ v := afs.New()
 rootFS, _ := afs.Configure(v)
 builtins.RegisterBuiltinsOnFS(v, rootFS)
 
-v.Mount("/data", mounts.NewLocalFS("/workspace"))
+v.Mount("/data", mounts.NewLocalFS("/workspace", afs.PermRW))
 
 sh := v.Shell("agent")
 result := sh.Execute(ctx, "ls /data")
@@ -60,11 +60,11 @@ fmt.Println(result.Output)
 
 ## Layer 2: MCP Server
 
-[MCP (Model Context Protocol)](https://modelcontextprotocol.io) is the emerging standard for connecting agents to external tools. AFS exposes itself as an MCP server, making it accessible to any MCP-compatible agent — including OpenClaw, Claude Desktop, and the OpenAI Agents SDK.
+[MCP (Model Context Protocol)](https://modelcontextprotocol.io) is the emerging standard for connecting agents to external tools. Shellfish exposes itself as an MCP server, making it accessible to any MCP-compatible agent — including OpenClaw, Claude Desktop, and the OpenAI Agents SDK.
 
 ### Tools
 
-The MCP server exposes AFS operations as tools:
+The MCP server exposes Shellfish operations as tools:
 
 | Tool | Description |
 |------|-------------|
@@ -78,7 +78,7 @@ The `afs_shell` tool is the most important — it provides access to the full sh
 
 ### Resources
 
-AFS also exposes content through MCP Resources:
+Shellfish also exposes content through MCP Resources:
 
 ```
 afs://mounts         → current mount table
@@ -86,17 +86,17 @@ afs://tree/{path}    → directory tree at path
 afs://file/{path}    → file content
 ```
 
-This allows MCP clients to browse AFS content without tool calls — useful for context injection.
+This allows MCP clients to browse Shellfish content without tool calls — useful for context injection.
 
 ### Integration with OpenClaw
 
-OpenClaw supports MCP servers through its plugin system. AFS connects as a stdio-based MCP server:
+OpenClaw supports MCP servers through its plugin system. Shellfish connects as a stdio-based MCP server:
 
 ```json
 {
   "mcpServers": {
-    "afs": {
-      "command": "afs-server",
+    "shellfish": {
+      "command": "shellfish-server",
       "args": [
         "--mount", "/data:./workspace",
         "--mount", "/docs:./documentation"
@@ -107,7 +107,7 @@ OpenClaw supports MCP servers through its plugin system. AFS connects as a stdio
 }
 ```
 
-Once connected, OpenClaw's agent can use AFS through natural shell commands:
+Once connected, OpenClaw's agent can use Shellfish through natural shell commands:
 
 ```
 > afs_shell "ls /data"
@@ -117,13 +117,13 @@ Once connected, OpenClaw's agent can use AFS through natural shell commands:
 
 ### Integration with Claude Desktop
 
-Claude Desktop natively supports MCP servers. Add AFS to `claude_desktop_config.json`:
+Claude Desktop natively supports MCP servers. Add Shellfish to `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "afs": {
-      "command": "afs-server",
+    "shellfish": {
+      "command": "shellfish-server",
       "args": ["--mount", "/projects:~/projects"]
     }
   }
@@ -132,7 +132,7 @@ Claude Desktop natively supports MCP servers. Add AFS to `claude_desktop_config.
 
 ## Layer 3: 9P Server
 
-[9P](https://en.wikipedia.org/wiki/9P_(protocol)) is Plan 9's file protocol — a minimal, well-defined protocol for accessing remote filesystems. It's the ideal cross-language bridge for AFS because:
+[9P](https://en.wikipedia.org/wiki/9P_(protocol)) is Plan 9's file protocol — a minimal, well-defined protocol for accessing remote filesystems. It's the ideal cross-language bridge for Shellfish because:
 
 1. **True POSIX semantics.** Any language can `open()`, `read()`, `write()` files over 9P.
 2. **Kernel-level mounting.** On Linux: `mount -t 9p localhost /mnt/afs`. The filesystem appears natively.
@@ -144,7 +144,7 @@ Claude Desktop natively supports MCP servers. Add AFS to `claude_desktop_config.
 Start the 9P server:
 
 ```bash
-afs-server --9p :5640 --mount /data:./workspace
+shellfish-server --9p :5640 --mount /data:./workspace
 ```
 
 Mount it on Linux:
@@ -153,10 +153,10 @@ Mount it on Linux:
 mount -t 9p -o port=5640,trans=tcp localhost /mnt/afs
 ```
 
-Now any program — Python, Rust, shell scripts — accesses AFS through standard file I/O:
+Now any program — Python, Rust, shell scripts — accesses Shellfish through standard file I/O:
 
 ```python
-# Python agent accessing AFS
+# Python agent accessing Shellfish
 with open("/mnt/afs/data/report.md") as f:
     content = f.read()
 
@@ -175,21 +175,21 @@ cat /mnt/afs/data/config.yaml | grep database
 | Client code needed | None (OS mount) | Generated stubs | HTTP client |
 | Semantics | File I/O (open/read/write) | RPC calls | HTTP verbs |
 | Streaming | Native (file reads) | Bidirectional streams | SSE/WebSocket |
-| Cross-language | Any (OS-level) | Per-language codegen | Any (HTTP) |
+| Cross-language | Any (OS-level) | Per-language codegen | HTTP |
 | Overhead | Minimal | Moderate (protobuf) | High (JSON) |
 
-9P gives the broadest reach with the least friction. A Python agent doesn't need an AFS SDK — it just reads files.
+9P gives the broadest reach with the least friction. A Python agent doesn't need a Shellfish SDK — it just reads files.
 
 ## OpenViking Integration
 
 [OpenViking](https://github.com/volcengine/OpenViking) is ByteDance's open-source context database for AI agents. It uses a `viking://` URI scheme and provides L0/L1/L2 tiered context loading with semantic retrieval.
 
-AFS integrates with OpenViking by implementing a `VikingProvider` — an AFS provider that connects to OpenViking's HTTP server and maps its operations to the Provider interface.
+Shellfish integrates with OpenViking by implementing a `VikingProvider` — a Shellfish provider that connects to OpenViking's HTTP server and maps its operations to the Provider interface.
 
 ### Mapping
 
 ```
-AFS Path                          OpenViking API
+Shellfish Path                    OpenViking API
 ──────────────────                ──────────────────
 ls /ctx/resources/                → client.ls("viking://resources/")
 cat /ctx/resources/doc.md         → client.read("viking://resources/doc.md")
@@ -202,7 +202,7 @@ search "query" /ctx/              → client.find("query", target_uri="viking://
 
 ### Value for both sides
 
-**For AFS:** Gains semantic retrieval, automatic summarization, and the L0/L1/L2 tiered loading model — capabilities that a pure filesystem can't provide on its own.
+**For Shellfish:** Gains semantic retrieval, automatic summarization, and the L0/L1/L2 tiered loading model — capabilities that a pure filesystem can't provide on its own.
 
 **For OpenViking:** Gains a shell interface, pipe composition, unified namespace with other data sources, and cross-language access through 9P. An agent can `grep` through OpenViking content, pipe search results to other commands, and mix OpenViking data with local files in a single command.
 
@@ -234,12 +234,12 @@ $ cat /ctx/resources/my_project/src/payments/stripe.py | grep "except"
 
 The agent traverses from abstract → overview → specific file without ever leaving the shell.
 
-## `afs-server`: The Unified Binary
+## `shellfish-server`: The Unified Binary
 
-The `afs-server` command starts AFS with one or more protocol adapters:
+The `shellfish-server` command starts Shellfish with one or more protocol adapters:
 
 ```bash
-afs-server \
+shellfish-server \
   --mcp stdio \                    # MCP over stdin/stdout
   --9p :5640 \                     # 9P on TCP port 5640
   --mount /data:./workspace \      # mount local directory

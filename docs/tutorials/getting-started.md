@@ -1,6 +1,6 @@
 # Getting Started
 
-This tutorial walks you through setting up AFS, mounting data sources, and running shell commands. By the end, you'll have a working virtual filesystem with local files, in-memory tools, and a shell interface.
+This tutorial walks you through setting up Shellfish, mounting data sources, and running shell commands. By the end, you'll have a working virtual filesystem with local files, in-memory tools, and a shell interface.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ func main() {
     builtins.RegisterBuiltinsOnFS(v, rootFS)
 
     // 4. Mount a local directory
-    v.Mount("/data", mounts.NewLocalFS("."))
+    v.Mount("/data", mounts.NewLocalFS(".", afs.PermRW))
 
     // 5. Create a shell and run commands
     sh := v.Shell("agent")
@@ -63,17 +63,17 @@ Run it:
 go run main.go
 ```
 
-You'll see a listing of your current directory under `/data` and the AFS version string.
+You'll see a listing of your current directory under `/data` and the Shellfish version string.
 
 ## Adding In-Memory Files
 
 You can add files directly to the root MemFS:
 
 ```go
-rootFS.AddFile("etc/motd", []byte("Welcome to AFS\n"), afs.PermRO)
+rootFS.AddFile("etc/motd", []byte("Welcome to Shellfish\n"), afs.PermRO)
 
 result := sh.Execute(ctx, "cat /etc/motd")
-// Output: Welcome to AFS
+// Output: Welcome to Shellfish
 ```
 
 ## Registering Custom Commands
@@ -126,7 +126,7 @@ sh.Execute(ctx, "mkdir /tmp/work && echo 'created' || echo 'failed'")
 ## Mounting SQLite for Persistence
 
 ```go
-sqlFS, err := mounts.NewSQLiteFS("/var/data/memory.db")
+sqlFS, err := mounts.NewSQLiteFS("/var/data/memory.db", afs.PermRW)
 if err != nil {
     panic(err)
 }
@@ -170,5 +170,6 @@ sh.Execute(ctx, "env")
 ## Next Steps
 
 - Read [Architecture](../explanation/architecture.md) to understand how VirtualOS, MountTable, and Shell work together.
-- Read [Provider Model](../explanation/provider-model.md) to learn how to create custom providers.
-- Read [Create a Custom Provider](../how-to/create-provider.md) for a step-by-step guide.
+- Read [Provider Model](../explanation/provider-model.md) to learn how capability-based interfaces work.
+- Read [Create a Custom Provider](../how-to/create-provider.md) for a step-by-step guide to building your own provider.
+- Read [Shell as Interface](../explanation/shell-as-interface.md) to understand why shell commands are the optimal agent interface.

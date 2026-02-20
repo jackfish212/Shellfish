@@ -1,26 +1,54 @@
-# AFS — Agent File System
+# Shellfish
 
-A mount-based virtual filesystem runtime for AI agents. Everything — files, tools, APIs, knowledge bases — lives under one namespace, operated through a built-in shell.
+> Mount anything, shell everything.
+
+**Plan 9 for AI Agents.** A virtual userland that unifies heterogeneous data sources — files, databases, APIs, memory, tools — into one filesystem namespace. Agents `ls`, `cat`, `grep`, and pipe their way through the world.
 
 ```
 /
 ├── data/        → LocalFS (host directory)
 ├── memory/      → SQLiteFS (persistent storage)
 ├── tools/mcp/   → MCPToolProvider (external tools)
-├── knowledge/   → your custom provider (semantic search, ...)
+├── knowledge/   → your custom provider
 └── proc/        → ProcProvider (system info)
 ```
 
+## Philosophy
+
+- **One verb to access everything.** `read` works on local files, databases, APIs, and memory — the agent doesn't care what's behind the mount point.
+- **Not restricting — reframing.** Shellfish doesn't take capabilities away from agents. It gives them a better interface. Linux "restricts" programs from touching hardware directly — and makes them more powerful for it.
+- **LLMs speak filesystem natively.** Training data is saturated with `ls`, `cat`, `grep`, `echo`. File operations are the one interface every LLM already understands. Meet them where they are.
+- **Mount what matters, hide what doesn't.** An agent that sees the entire OS gets lost. An agent that sees `/workspace`, `/memory`, `/tools` knows exactly what to do. Mounting is attention management.
+- **Same agent, different world.** Swap mount tables, not code. Dev, CI, sandbox, remote — the agent logic never changes.
+- **Safety is a side effect of good design.** Capability-based access control and mount isolation aren't the selling point — they're a natural consequence of the abstraction.
+- **The composable middle layer.** Not a framework (above), not a storage engine (below). The runtime between them that makes everything interoperable.
+
 ## Why
 
-Agent frameworks give LLMs tools through JSON schemas — `read_file`, `write_file`, `search_files`, one API per operation. This works, but it's fragmented: tools don't compose, data sources have separate interfaces, and adding a new source means defining new schemas.
+Agent frameworks give LLMs tools through JSON schemas — `read_file`, `write_file`, `search_files`, one API per operation. This works, but it fragments: tools don't compose, data sources have separate interfaces, and every new source means new schemas.
 
-Unix solved this 50 years ago: **everything is a file.** Mount a data source, then `cat`, `grep`, `ls`, and pipe them together. AFS brings this to agents — one shell tool replaces dozens of individual tool definitions.
+Unix solved this 50 years ago: **everything is a file.** Mount a data source, then use standard commands to operate on it. Shellfish brings this to agents — one shell tool replaces dozens of individual tool definitions.
 
 ```bash
 # One tool call, not five
 cat /data/logs/2026-02-*.md | grep ERROR | head -10
 ```
+
+### Comparison
+
+The AI agent infrastructure space is growing fast. Here's where Shellfish sits:
+
+| Project | What it is | Shellfish difference |
+|---------|-----------|----------------------|
+| **OpenClaw** | Full agent runtime (TS, 182K stars). Gives agents shell, browser, filesystem via built-in tools. | OpenClaw is a complete agent; Shellfish is an embeddable layer. OpenClaw's tools are hardcoded to the host OS — Shellfish virtualizes and composes across mount points. Can serve as OpenClaw's MCP backend. |
+| **Turso AgentFS** | SQLite-backed agent filesystem (Rust). Copy-on-write isolation, audit logging, single-file snapshots. | AgentFS isolates file access; Shellfish unifies heterogeneous sources. AgentFS has no shell, no pipes, no mount composition. Complementary — SQLiteFS could wrap AgentFS. |
+| **OpenViking** | Context database (Python, ByteDance). `viking://` protocol, L0/L1/L2 tiered loading, semantic retrieval. | OpenViking is a storage backend with vector search; Shellfish is a runtime with shell. Not competitors — OpenViking can be mounted as a Shellfish provider, combining semantic retrieval with shell composability. |
+| **ToolFS** | FUSE-based VFS for agents (Go, IceWhaleTech). Unified `/toolfs` namespace, WASM skills, RAG. | Both are Go VFS projects. ToolFS requires FUSE (kernel module); Shellfish is pure userspace with protocol-native access (MCP, 9P). ToolFS bundles RAG/skills; Shellfish keeps the core minimal and mounts them as providers. |
+| **AIOS** | LLM OS kernel (Python, academic). Agent scheduling, context switching, memory management. | AIOS is a research OS that manages multiple agents; Shellfish is a practical runtime for individual agents. AIOS handles scheduling and resource allocation — concerns Shellfish intentionally leaves to the host. |
+| **Agent OS** | Self-evolving agent runtime (Rust). AIR typed control plane, capability security, constitutional self-modification. | Agent OS focuses on agent self-modification and governance; Shellfish focuses on data access and tool composition. Different layers — Agent OS could use Shellfish as its filesystem substrate. |
+| **MCP FS Server** | Exposes host files as MCP tools (Go/TS). `read_file`, `write_file`, `search_files`. | Flat tool list for one directory. Shellfish virtualizes: mount multiple sources, compose via shell pipes, search across mounts. One `shell` tool replaces the entire tool list. |
+
+**TL;DR:** Most projects are either full agent runtimes (OpenClaw, AIOS) or single-purpose storage (AgentFS, OpenViking). Shellfish is the **composable middle layer** — a virtual userland that any agent can embed, mount anything into, and operate through a shell. Think Docker for agent context: it doesn't replace your app, it gives it a portable, composable runtime.
 
 ## Install
 
@@ -28,7 +56,7 @@ cat /data/logs/2026-02-*.md | grep ERROR | head -10
 go get github.com/agentfs/afs@latest
 ```
 
-Requires Go 1.24+.
+Requires Go 1.24+. The only external dependency is `modernc.org/sqlite` (pure Go, no CGO).
 
 ## Quick Start
 
@@ -49,7 +77,7 @@ func main() {
     rootFS, _ := afs.Configure(v)
     builtins.RegisterBuiltinsOnFS(v, rootFS)
 
-    v.Mount("/data", mounts.NewLocalFS("."))
+    v.Mount("/data", mounts.NewLocalFS(".", afs.PermRW))
 
     sh := v.Shell("agent")
     ctx := context.Background()
@@ -63,7 +91,7 @@ func main() {
 
 ### Mount anything
 
-Every data source implements the `Provider` interface (just `Stat` + `List`) and gets mounted at a path. Additional capabilities are expressed as optional interfaces:
+Every data source implements the `Provider` interface (just `Stat` + `List`) and gets mounted at a path. Additional capabilities are expressed as optional interfaces, detected at runtime via type assertions:
 
 | Interface | Methods | Purpose |
 |-----------|---------|---------|
@@ -74,78 +102,134 @@ Every data source implements the `Provider` interface (just `Stat` + `List`) and
 | `Searchable` | `Search` | Full-text or semantic search |
 | `Mutable` | `Mkdir`, `Remove`, `Rename` | Namespace changes |
 
-AFS detects capabilities at runtime via type assertions — providers only implement what they support.
+Providers only implement what they support — no stub methods, no unused interfaces.
 
 ### Built-in providers
 
-| Provider | Description |
-|----------|-------------|
-| `MemFS` | In-memory filesystem, supports registering Go functions as commands |
-| `LocalFS` | Mounts a host directory into AFS |
-| `SQLiteFS` | Persistent filesystem backed by SQLite |
-| `MCPToolProvider` | Bridges MCP server tools as executable entries |
-| `MCPResourceProvider` | Bridges MCP server resources as readable entries |
+| Provider | Capabilities | Description |
+|----------|-------------|-------------|
+| `MemFS` | R/W/X/Mut | In-memory filesystem; register Go functions as commands |
+| `LocalFS` | R/W/S/Mut | Mount a host directory |
+| `SQLiteFS` | R/W/Mut | Persistent filesystem backed by a single SQLite file |
+| `MCPToolProvider` | R/X/S | Bridge MCP server tools as executable entries |
+| `MCPResourceProvider` | R/S | Bridge MCP server resources as readable entries |
 
-### Shell
+### Shell everything
 
-Agents interact through a shell with familiar commands:
+Agents interact through a shell with pipes, redirects, logical operators, here-documents, and environment variables:
 
 ```bash
 ls /data                              # browse
 cat /data/config.yaml                 # read
-echo "done" > /memory/log.md          # write
+echo "done" > /memory/log.md          # write (redirect)
 search "auth" --scope /knowledge      # cross-mount search
 cat /data/users.json | grep admin     # pipes
 mkdir /tmp/work && cd /tmp/work       # logical operators
+cat << EOF | write /memory/note.md    # here-documents
+Meeting notes from today.
+EOF
 ```
 
-Built-in commands: `ls`, `cat`, `read`, `write`, `stat`, `search`, `grep`, `find`, `head`, `tail`, `mkdir`, `rm`, `mv`, `which`, `mount`, `uname`
+**Built-in commands:** `ls`, `cat`, `read`, `write`, `stat`, `search`, `grep`, `find`, `head`, `tail`, `mkdir`, `rm`, `mv`, `which`, `mount`, `uname`
 
-Shell builtins: `cd`, `pwd`, `echo`, `env`, `history`
+**Shell builtins:** `cd`, `pwd`, `echo`, `env`, `history`
 
 ### Custom providers
 
-Implement `Provider` + whichever capability interfaces you need:
+Implement `Provider` + whichever capability interfaces fit your data source:
 
 ```go
-type MyProvider struct{}
+type WikiProvider struct{ /* ... */ }
 
-func (p *MyProvider) Stat(ctx context.Context, path string) (*afs.Entry, error) { ... }
-func (p *MyProvider) List(ctx context.Context, path string, opts afs.ListOpts) ([]afs.Entry, error) { ... }
-func (p *MyProvider) Open(ctx context.Context, path string) (afs.File, error) { ... }
-func (p *MyProvider) Search(ctx context.Context, q string, opts afs.SearchOpts) ([]afs.SearchResult, error) { ... }
+func (w *WikiProvider) Stat(ctx context.Context, path string) (*afs.Entry, error) { /* ... */ }
+func (w *WikiProvider) List(ctx context.Context, path string, opts afs.ListOpts) ([]afs.Entry, error) { /* ... */ }
+func (w *WikiProvider) Open(ctx context.Context, path string) (afs.File, error) { /* ... */ }
+func (w *WikiProvider) Search(ctx context.Context, q string, opts afs.SearchOpts) ([]afs.SearchResult, error) { /* ... */ }
 
-v.Mount("/my-data", &MyProvider{})
+v.Mount("/wiki", &WikiProvider{})
+// Now: cat /wiki/Go_(programming_language) | head -20
+```
+
+### Custom commands
+
+Register Go functions as executable commands on any MemFS:
+
+```go
+rootFS.AddExecFunc("usr/bin/greet", func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
+    name := "world"
+    if len(args) > 0 {
+        name = args[0]
+    }
+    return io.NopCloser(strings.NewReader("Hello, " + name + "!\n")), nil
+}, mounts.FuncMeta{Description: "Greet someone", Usage: "greet [name]"})
 ```
 
 ## Integration
 
-AFS is not an agent framework — it's the filesystem layer underneath. Multiple protocols expose the same `VirtualOS` instance:
+Shellfish is not an agent framework — it's the runtime layer underneath. Expose the same `VirtualOS` instance through multiple protocols:
 
-| Protocol | Use case |
-|----------|----------|
-| **Go SDK** | Embed directly in Go agent code |
-| **MCP Server** | Connect to OpenClaw, Claude Desktop, or any MCP-compatible agent |
-| **9P Server** | Cross-language POSIX access — `mount -t 9p` and use standard file I/O from Python, Rust, etc. |
+| Protocol | Use case | Status |
+|----------|----------|--------|
+| **Go SDK** | Embed directly in Go agent code | Available |
+| **MCP Server** | Connect to OpenClaw, Claude Desktop, or any MCP client | Planned |
+| **9P Server** | Cross-language POSIX access — `mount -t 9p` then use standard file I/O from Python, Rust, etc. | Planned |
+
+### As an MCP server (planned)
+
+```json
+{
+  "mcpServers": {
+    "shellfish": {
+      "command": "shellfish-server",
+      "args": ["--mount", "/data:./workspace", "--mount", "/memory:sqlite:memory.db"]
+    }
+  }
+}
+```
+
+Any MCP-compatible agent (OpenClaw, Claude Desktop, ...) gets a single `shell` tool:
+
+```
+shell("cat /data/src/main.go | grep TODO")
+shell("search 'authentication' --scope /data --max 5")
+```
+
+### With OpenViking (planned)
+
+Mount OpenViking as a provider to combine semantic retrieval with the shell interface:
+
+```go
+viking := providers.NewViking("http://localhost:8000")
+v.Mount("/ctx", viking)
+```
+
+```bash
+cat /ctx/resources/project/.abstract     # L0: ~100 tokens summary
+cat /ctx/resources/project/.overview     # L1: ~2K tokens overview
+cat /ctx/resources/project/docs/api.md   # L2: full content
+search "auth flow" /ctx/                 # directory-recursive semantic search
+```
 
 ## Project Structure
 
 ```
-├── vos.go              # VirtualOS orchestrator
+shellfish/
+├── vos.go              # VirtualOS — central orchestrator
 ├── mount_table.go      # Path → Provider resolution (longest-prefix matching)
-├── shell.go            # Shell interface (pipes, redirects, here-docs, ...)
-├── configure.go        # Standard filesystem layout + /proc
-├── types/              # Core interfaces (Provider, Entry, File, Perm, ...)
-├── mounts/             # Built-in providers (MemFS, LocalFS, SQLiteFS, MCP)
-├── builtins/           # Shell commands (ls, cat, grep, search, ...)
-└── docs/               # Documentation (Diataxis: explanation / tutorials / how-to / reference)
+├── configure.go        # Standard filesystem layout (/bin, /etc, /proc, ...)
+├── exports.go          # Public API re-exports
+├── types/              # Core interfaces: Provider, Entry, File, Perm, ...
+├── mounts/             # Built-in providers: MemFS, LocalFS, SQLiteFS, MCP
+├── builtins/           # Commands: ls, cat, grep, search, find, ...
+├── shell/              # Shell: pipes, redirects, env, history, profile
+└── docs/               # Documentation (Diataxis)
 ```
 
 ## Documentation
 
 See [`docs/`](docs/README.md) for full documentation:
 
-- **[Why AFS](docs/explanation/why-afs.md)** — Problem statement, positioning, comparisons
+- **[Why Shellfish](docs/explanation/why-afs.md)** — Problem statement, positioning, comparisons
 - **[Architecture](docs/explanation/architecture.md)** — VirtualOS, MountTable, Shell internals
 - **[Provider Model](docs/explanation/provider-model.md)** — Capability-based interface design
 - **[Shell as Interface](docs/explanation/shell-as-interface.md)** — Why shell beats tool APIs for agents

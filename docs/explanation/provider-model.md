@@ -1,6 +1,6 @@
 # Provider Model
 
-The Provider model is AFS's core extensibility mechanism. It defines how external data sources, tools, and services plug into the virtual filesystem.
+The Provider model is Shellfish's core extensibility mechanism. It defines how external data sources, tools, and services plug into the virtual filesystem.
 
 ## Design Philosophy
 
@@ -10,7 +10,7 @@ Most plugin systems use one of two approaches:
 
 2. **Registration-based.** Plugins register themselves for specific operations via a registry. This creates coupling to the registry and makes capability discovery opaque.
 
-AFS uses a third approach: **interface composition with runtime detection.**
+Shellfish uses a third approach: **interface composition with runtime detection.**
 
 The base `Provider` interface is minimal — just `Stat` and `List`. Additional capabilities are separate interfaces that a provider *may* implement:
 
@@ -43,7 +43,7 @@ type Mutable interface {
 }
 ```
 
-AFS detects capabilities at runtime via Go type assertions:
+Shellfish detects capabilities at runtime via Go type assertions:
 
 ```go
 if w, ok := provider.(Writable); ok {
@@ -58,7 +58,7 @@ This design produces three important properties:
 
 ### 1. Providers only implement what they support
 
-A read-only knowledge base implements `Provider` + `Readable` + `Searchable`. It doesn't need to stub out `Write` or `Mkdir`. The type system prevents accidental writes at compile time, and AFS prevents them at runtime.
+A read-only knowledge base implements `Provider` + `Readable` + `Searchable`. It doesn't need to stub out `Write` or `Mkdir`. The type system prevents accidental writes at compile time, and Shellfish prevents them at runtime.
 
 ```go
 // A knowledge base — only navigation, reading, and search
@@ -72,7 +72,7 @@ func (kb *KnowledgeBase) Search(ctx context.Context, query string, opts SearchOp
 
 ### 2. New capabilities don't break existing providers
 
-If AFS adds a `Streamable` interface tomorrow, existing providers continue to work unchanged. Only providers that want streaming implement it. No version migration needed.
+If Shellfish adds a `Streamable` interface tomorrow, existing providers continue to work unchanged. Only providers that want streaming implement it. No version migration needed.
 
 ### 3. Capability is self-documenting
 
@@ -90,7 +90,7 @@ Agents can reason about what operations are available without trial and error.
 
 ## Built-in Providers
 
-AFS ships with several providers:
+Shellfish ships with several providers:
 
 ### MemFS — In-memory filesystem
 
@@ -111,10 +111,10 @@ fs.AddExecFunc("hello", helloFunc, mounts.FuncMeta{
 
 Implements: `Provider`, `Readable`, `Writable`, `Searchable`, `Mutable`
 
-Maps a host directory into AFS. File operations delegate to the OS. Search performs recursive text matching.
+Maps a host directory into Shellfish. File operations delegate to the OS. Search performs recursive text matching.
 
 ```go
-fs := mounts.NewLocalFS("/home/user/projects")
+fs := mounts.NewLocalFS("/home/user/projects", afs.PermRW)
 v.Mount("/projects", fs)
 // Now: cat /projects/readme.md → reads /home/user/projects/readme.md
 ```
@@ -126,7 +126,7 @@ Implements: `Provider`, `Readable`, `Writable`, `Mutable`
 Stores files and metadata in a SQLite database. Useful for persisting agent memory, session logs, or any data that should survive process restarts without depending on a specific directory structure.
 
 ```go
-fs, _ := mounts.NewSQLiteFS("/var/data/agent.db")
+fs, _ := mounts.NewSQLiteFS("/var/data/agent.db", afs.PermRW)
 v.Mount("/memory", fs)
 ```
 
@@ -137,7 +137,7 @@ Two variants:
 - **MCPToolProvider** — Exposes MCP server tools as executable entries. Each tool appears as a file under the mount point.
 - **MCPResourceProvider** — Exposes MCP server resources as readable entries.
 
-Both implement: `Provider`, `Readable`, `Executable` (tools) or `Readable` (resources), `Searchable`
+Both implement: `Provider`, `Readable`, `Searchable`, plus `Executable` (tools only)
 
 ```go
 toolProvider := mounts.NewMCPToolProvider(mcpClient)
@@ -148,7 +148,7 @@ v.Mount("/tools/notion", toolProvider)
 
 ## The Entry Model
 
-Every item in AFS is described by an `Entry`:
+Every item in Shellfish is described by an `Entry`:
 
 ```go
 type Entry struct {

@@ -1,10 +1,12 @@
-# Provider Interfaces Reference
+# API Reference
+
+## Provider Interfaces
 
 Package: `github.com/agentfs/afs/types`
 
 Re-exported at package root: `github.com/agentfs/afs`
 
-## Provider
+### Provider
 
 The base interface. Every mountable data source must implement this.
 
@@ -15,17 +17,13 @@ type Provider interface {
 }
 ```
 
-### Stat
-
-Returns metadata for a single entry.
+**Stat** — Returns metadata for a single entry.
 
 - `path`: relative to mount point, `""` for mount root.
 - Returns `*Entry` with at minimum `Name`, `IsDir`, `Perm` set.
 - Returns error if the path does not exist.
 
-### List
-
-Returns entries in a directory.
+**List** — Returns entries in a directory.
 
 - `path`: relative to mount point, `""` for mount root.
 - `opts.Recursive`: if true, list all descendants.
@@ -33,7 +31,7 @@ Returns entries in a directory.
 
 ---
 
-## Readable
+### Readable
 
 Providers that support reading file content.
 
@@ -43,13 +41,11 @@ type Readable interface {
 }
 ```
 
-### Open
-
-Opens a file for reading. Returns a `File` (which embeds `io.ReadCloser`). Callers must close the returned file.
+**Open** — Opens a file for reading. Returns a `File` (which embeds `io.ReadCloser`). Callers must close the returned file.
 
 ---
 
-## Writable
+### Writable
 
 Providers that support creating or updating files.
 
@@ -59,13 +55,11 @@ type Writable interface {
 }
 ```
 
-### Write
-
-Writes content from `r` to the file at `path`. Creates the file if it doesn't exist, overwrites if it does.
+**Write** — Writes content from `r` to the file at `path`. Creates the file if it doesn't exist, overwrites if it does.
 
 ---
 
-## Executable
+### Executable
 
 Providers that can execute tools or commands.
 
@@ -75,13 +69,11 @@ type Executable interface {
 }
 ```
 
-### Exec
-
-Executes the entry at `path` with the given arguments and optional stdin. Returns a reader for the output. This is how builtins, MCP tools, and custom commands are invoked.
+**Exec** — Executes the entry at `path` with the given arguments and optional stdin. Returns a reader for the output. This is how builtins, MCP tools, and custom commands are invoked.
 
 ---
 
-## Searchable
+### Searchable
 
 Providers that support query-based retrieval.
 
@@ -91,13 +83,11 @@ type Searchable interface {
 }
 ```
 
-### Search
-
-Performs a search within the provider's data. Semantics are provider-defined — could be full-text, regex, semantic/vector, or any other search modality.
+**Search** — Performs a search within the provider's data. Semantics are provider-defined — could be full-text, regex, semantic/vector, or any other search modality.
 
 ---
 
-## Mutable
+### Mutable
 
 Providers that support structural changes to the namespace.
 
@@ -109,21 +99,15 @@ type Mutable interface {
 }
 ```
 
-### Mkdir
+**Mkdir** — Creates a directory at `path` with the given permissions.
 
-Creates a directory at `path` with the given permissions.
+**Remove** — Removes the entry at `path`. Behavior for non-empty directories is provider-defined.
 
-### Remove
-
-Removes the entry at `path`. Behavior for non-empty directories is provider-defined.
-
-### Rename
-
-Moves or renames an entry. Both paths are relative to the same mount point — cross-mount renames are not supported.
+**Rename** — Moves or renames an entry. Both paths are relative to the same mount point — cross-mount renames are not supported.
 
 ---
 
-## MountInfoProvider
+### MountInfoProvider
 
 Optional. Providers that can describe themselves for the `mount` command.
 
@@ -152,6 +136,8 @@ type Entry struct {
     Modified time.Time
     Meta     map[string]string // provider-specific metadata
 }
+
+func (e Entry) String() string
 ```
 
 ### File
@@ -165,9 +151,19 @@ type File interface {
 ```
 
 Constructors:
+
 - `NewFile(name string, entry *Entry, rc io.ReadCloser) File`
-- `NewSeekableFile(name string, entry *Entry, rs io.ReadSeeker) File`
-- `NewExecutableFile(name string, entry *Entry, rc io.ReadCloser) File`
+- `NewSeekableFile(name string, entry *Entry, rc io.ReadCloser, seeker io.Seeker) File`
+- `NewExecutableFile(f File, exec func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error)) ExecutableFile`
+
+### ExecutableFile
+
+```go
+type ExecutableFile interface {
+    File
+    Exec(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error)
+}
+```
 
 ### Perm
 
@@ -175,17 +171,17 @@ Constructors:
 type Perm uint8
 
 const (
-    PermNone  Perm = 0
-    PermRead  Perm = 1 << 0  // 1
-    PermWrite Perm = 1 << 1  // 2
-    PermExec  Perm = 1 << 2  // 4
+    PermRead  Perm = 1 << iota // r
+    PermWrite                  // w
+    PermExec                   // x
 )
 
 const (
-    PermRO  = PermRead               // 1
-    PermRW  = PermRead | PermWrite    // 3
-    PermRX  = PermRead | PermExec     // 5
-    PermRWX = PermRead | PermWrite | PermExec  // 7
+    PermNone Perm = 0
+    PermRO        = PermRead               // 1
+    PermRW        = PermRead | PermWrite    // 3
+    PermRX        = PermRead | PermExec     // 5
+    PermRWX       = PermRead | PermWrite | PermExec  // 7
 )
 
 func (p Perm) CanRead() bool
@@ -197,15 +193,15 @@ func (p Perm) String() string  // e.g. "rwx", "r--", "rw-"
 ### OpenFlag
 
 ```go
-type OpenFlag uint8
+type OpenFlag int
 
 const (
     O_RDONLY OpenFlag = 0
-    O_WRONLY OpenFlag = 1
-    O_RDWR   OpenFlag = 2
-    O_CREATE OpenFlag = 4
-    O_TRUNC  OpenFlag = 8
-    O_APPEND OpenFlag = 16
+    O_WRONLY OpenFlag = 1 << iota
+    O_RDWR
+    O_CREATE
+    O_TRUNC
+    O_APPEND
 )
 
 func (f OpenFlag) IsReadable() bool
@@ -242,7 +238,26 @@ type SearchResult struct {
 
 ---
 
-## VirtualOS API
+## Errors
+
+```go
+var (
+    ErrNotFound        = errors.New("afs: not found")
+    ErrNotExecutable   = errors.New("afs: not executable")
+    ErrNotReadable     = errors.New("afs: permission denied: not readable")
+    ErrNotWritable     = errors.New("afs: permission denied: not writable")
+    ErrIsDir           = errors.New("afs: is a directory")
+    ErrNotDir          = errors.New("afs: not a directory")
+    ErrAlreadyMounted  = errors.New("afs: path already mounted")
+    ErrMountUnderMount = errors.New("afs: mount under existing mount point")
+    ErrNotSupported    = errors.New("afs: operation not supported")
+    ErrParentNotExist  = errors.New("afs: parent directory does not exist")
+)
+```
+
+---
+
+## VirtualOS
 
 Package: `github.com/agentfs/afs`
 
@@ -266,19 +281,57 @@ func (v *VirtualOS) Search(ctx context.Context, query string, opts SearchOpts) (
 func (v *VirtualOS) Shell(user string) *Shell
 ```
 
-## Shell API
+---
+
+## MountTable
 
 ```go
-func NewShell(v *VirtualOS, user string) *Shell
+func (t *MountTable) Mount(mountPath string, p Provider) error
+func (t *MountTable) Unmount(mountPath string) error
+func (t *MountTable) Resolve(fullPath string) (Provider, string, error)
+func (t *MountTable) ChildMounts(dirPath string) []Entry
+func (t *MountTable) All() []string
+func (t *MountTable) AllInfo() []MountInfo
+
+type MountInfo struct {
+    Path        string
+    Provider    Provider
+    Permissions string
+}
+```
+
+---
+
+## Shell
+
+Package: `github.com/agentfs/afs/shell`
+
+Re-exported at: `github.com/agentfs/afs`
+
+```go
+func NewShell(v VirtualOS, user string) *Shell
 
 func (s *Shell) Execute(ctx context.Context, cmdLine string) *ExecResult
 func (s *Shell) Cwd() string
+func (s *Shell) History() []string
+func (s *Shell) ClearHistory()
+func (s *Shell) HistorySize() int
 
 type ExecResult struct {
     Output string
     Code   int
 }
+
+type ShellEnv struct { /* ... */ }
+
+func (e *ShellEnv) Get(key string) string
+func (e *ShellEnv) Set(key, value string)
+func (e *ShellEnv) All() map[string]string
+
+const MaxHistorySize = 1000
 ```
+
+---
 
 ## Setup Functions
 
@@ -286,4 +339,129 @@ type ExecResult struct {
 func Configure(v *VirtualOS) (*mounts.MemFS, error)
 func MountRootFS(v *VirtualOS) (*mounts.MemFS, error)
 func MountProc(v *VirtualOS) error
+func GetVersionInfo() VersionInfo
+
+type VersionInfo struct {
+    Version   string
+    BuildDate string
+    GitCommit string
+    GoVersion string
+    Platform  string
+}
+
+func (v VersionInfo) ProcVersion() string
+```
+
+---
+
+## Providers
+
+Package: `github.com/agentfs/afs/mounts`
+
+### MemFS
+
+```go
+func NewMemFS(perm Perm) *MemFS
+
+func (fs *MemFS) AddFile(path string, content []byte, perm Perm)
+func (fs *MemFS) AddDir(path string)
+func (fs *MemFS) AddFunc(path string, fn Func, meta FuncMeta)
+func (fs *MemFS) AddExecFunc(path string, fn ExecFunc, meta FuncMeta)
+func (fs *MemFS) RemoveFunc(path string) bool
+
+// Implements: Provider, Readable, Writable, Executable, Mutable, MountInfoProvider
+```
+
+### LocalFS
+
+```go
+func NewLocalFS(root string, perm Perm) *LocalFS
+
+// Implements: Provider, Readable, Writable, Searchable, Mutable, MountInfoProvider
+```
+
+### SQLiteFS
+
+```go
+func NewSQLiteFS(dbPath string, perm Perm) (*SQLiteFS, error)
+
+func (fs *SQLiteFS) Close() error
+
+// Implements: Provider, Readable, Writable, Mutable, MountInfoProvider
+```
+
+### MCP Providers
+
+```go
+func NewMCPToolProvider(client MCPClient) *MCPToolProvider
+func NewMCPResourceProvider(client MCPClient) *MCPResourceProvider
+func MountMCP(v interface{ Mount(string, Provider) error }, basePath string, client MCPClient) error
+
+// MCPToolProvider implements: Provider, Readable, Executable, Searchable, MountInfoProvider
+// MCPResourceProvider implements: Provider, Readable, Searchable, MountInfoProvider
+
+type MCPClient interface {
+    ListTools(ctx context.Context) ([]MCPTool, error)
+    CallTool(ctx context.Context, name string, args map[string]any) (*MCPToolResult, error)
+    ListResources(ctx context.Context) ([]MCPResource, error)
+    ReadResource(ctx context.Context, uri string) (string, error)
+    ListPrompts(ctx context.Context) ([]MCPPrompt, error)
+    GetPrompt(ctx context.Context, name string, args map[string]any) (string, error)
+}
+```
+
+### Function Types
+
+```go
+type Func func(ctx context.Context, args []string, stdin string) (string, error)
+type ExecFunc func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error)
+
+type FuncMeta struct {
+    Description string
+    Usage       string
+}
+```
+
+---
+
+## Builtins
+
+Package: `github.com/agentfs/afs/builtins`
+
+```go
+func RegisterBuiltins(v *afs.VirtualOS, mountPath string) error
+func RegisterBuiltinsOnFS(v *afs.VirtualOS, fs *mounts.MemFS) error
+```
+
+Registered commands (at `/usr/bin/`):
+
+| Command | Description | Key flags |
+|---------|-------------|-----------|
+| `ls` | List directory entries | `-l` (long), `-a` (all) |
+| `cat` | Read file content (reads stdin if no file) | — |
+| `read` | Read file content | — |
+| `write` | Write stdin or args to file | — |
+| `stat` | Show entry metadata | — |
+| `search` | Cross-mount search | `--scope`, `--max` |
+| `grep` | Filter lines matching pattern (from stdin) | — |
+| `find` | Search directory hierarchy | `-name`, `-type`, `-maxdepth`, `-mindepth`, `-path` |
+| `head` | Output first part of file | `-n` (lines), `-c` (bytes) |
+| `tail` | Output last part of file | `-n` (lines), `-c` (bytes) |
+| `mkdir` | Create directories | `-p` (parents) |
+| `rm` | Remove files/directories | `-r` (recursive), `-f` (force) |
+| `mv` | Move/rename files | — |
+| `which` | Show full path of command | — |
+| `mount` | List mount points with permissions | — |
+| `uname` | Print system information | `-a`, `-s`, `-n`, `-r`, `-v`, `-m` |
+
+All commands support `-h` / `--help` for usage information.
+
+---
+
+## Context Helpers
+
+```go
+func WithEnv(ctx context.Context, env map[string]string) context.Context
+func Env(ctx context.Context, key string) string
+func CleanPath(p string) string
 ```
