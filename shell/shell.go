@@ -14,12 +14,17 @@ type hereDocInfo struct {
 	quoted    bool
 }
 
+// ExecHook is called after every top-level command execution.
+// cmdLine is the raw command string; result is the execution outcome.
+type ExecHook func(cmdLine string, result *ExecResult)
+
 // Shell provides a command-line interface to shellfish operations.
 type Shell struct {
 	vos         VirtualOS
 	Env         *ShellEnv
 	history     []string
 	savedOffset int
+	execHooks   []ExecHook
 }
 
 // NewShell creates a Shell bound to a VirtualOS instance.
@@ -38,6 +43,12 @@ func NewShell(v VirtualOS, user string) *Shell {
 	sh.loadProfileEnv()
 	sh.loadHistory()
 	return sh
+}
+
+// OnExec registers a hook that is called after every top-level Execute call.
+// Multiple hooks are called in registration order.
+func (s *Shell) OnExec(hook ExecHook) {
+	s.execHooks = append(s.execHooks, hook)
 }
 
 // Cwd returns the current working directory.
@@ -179,6 +190,15 @@ func (s *Shell) Execute(ctx context.Context, cmdLine string) *ExecResult {
 		return &ExecResult{}
 	}
 
+	raw := cmdLine
+	result := s.execute(ctx, cmdLine)
+	for _, hook := range s.execHooks {
+		hook(raw, result)
+	}
+	return result
+}
+
+func (s *Shell) execute(ctx context.Context, cmdLine string) *ExecResult {
 	s.addToHistory(cmdLine)
 
 	if strings.HasPrefix(cmdLine, "{") && strings.Contains(cmdLine, "}") {

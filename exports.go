@@ -29,6 +29,8 @@ type (
 	Mutable           = types.Mutable
 	Touchable         = types.Touchable
 	ExecutableFile    = types.ExecutableFile
+	WatchEvent        = types.WatchEvent
+	EventType         = types.EventType
 )
 
 const (
@@ -49,6 +51,15 @@ const (
 	O_CREATE = types.O_CREATE
 	O_TRUNC  = types.O_TRUNC
 	O_APPEND = types.O_APPEND
+)
+
+const (
+	EventCreate = types.EventCreate
+	EventWrite  = types.EventWrite
+	EventRemove = types.EventRemove
+	EventRename = types.EventRename
+	EventMkdir  = types.EventMkdir
+	EventAll    = types.EventAll
 )
 
 var (
@@ -75,6 +86,7 @@ type (
 	Shell      = shell.Shell
 	ShellEnv   = shell.ShellEnv
 	ExecResult = shell.ExecResult
+	ExecHook   = shell.ExecHook
 )
 
 // Shell constructors and functions

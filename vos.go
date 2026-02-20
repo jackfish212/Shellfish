@@ -18,11 +18,18 @@ import (
 // mount merging, permission checking, and capability detection.
 type VirtualOS struct {
 	mounts *MountTable
+	hub    *watchHub
 }
 
 // New creates a new VirtualOS instance.
 func New() *VirtualOS {
-	return &VirtualOS{mounts: NewMountTable()}
+	return &VirtualOS{mounts: NewMountTable(), hub: newWatchHub()}
+}
+
+// Watch creates a Watcher that receives events for paths under prefix
+// matching the given event mask. Use "/" or "" to watch all paths.
+func (v *VirtualOS) Watch(prefix string, mask EventType) *Watcher {
+	return v.hub.watch(prefix, mask)
 }
 
 // Mount registers a Provider at the given path.
@@ -213,13 +220,20 @@ func (v *VirtualOS) Write(ctx context.Context, path string, reader io.Reader) er
 		return fmt.Errorf("%w: %s (provider is not writable)", ErrNotWritable, path)
 	}
 
-	if entry, statErr := p.Stat(ctx, inner); statErr == nil {
-		if !entry.Perm.CanWrite() {
-			return fmt.Errorf("%w: %s", ErrNotWritable, path)
-		}
+	existing, statErr := p.Stat(ctx, inner)
+	isNew := statErr != nil
+	if existing != nil && !existing.Perm.CanWrite() {
+		return fmt.Errorf("%w: %s", ErrNotWritable, path)
 	}
 
-	return w.Write(ctx, inner, reader)
+	if err := w.Write(ctx, inner, reader); err != nil {
+		return err
+	}
+	if isNew {
+		v.hub.emit(EventCreate, path)
+	}
+	v.hub.emit(EventWrite, path)
+	return nil
 }
 
 // Exec executes an entry at the given path.
@@ -261,7 +275,11 @@ func (v *VirtualOS) Mkdir(ctx context.Context, path string, perm Perm) error {
 		return fmt.Errorf("%w: %s (provider is not mutable)", ErrNotSupported, path)
 	}
 
-	return m.Mkdir(ctx, inner, perm)
+	if err := m.Mkdir(ctx, inner, perm); err != nil {
+		return err
+	}
+	v.hub.emit(EventMkdir, path)
+	return nil
 }
 
 // Remove removes a file or directory at the given path.
@@ -284,7 +302,11 @@ func (v *VirtualOS) Remove(ctx context.Context, path string) error {
 		}
 	}
 
-	return m.Remove(ctx, inner)
+	if err := m.Remove(ctx, inner); err != nil {
+		return err
+	}
+	v.hub.emit(EventRemove, path)
+	return nil
 }
 
 // Rename moves/renames an entry.
@@ -311,7 +333,11 @@ func (v *VirtualOS) Rename(ctx context.Context, oldPath, newPath string) error {
 		return fmt.Errorf("%w: %s (provider is not mutable)", ErrNotSupported, oldPath)
 	}
 
-	return m.Rename(ctx, innerOld, innerNew)
+	if err := m.Rename(ctx, innerOld, innerNew); err != nil {
+		return err
+	}
+	v.hub.emitRename(EventRename, newPath, oldPath)
+	return nil
 }
 
 // Touch updates the modification time of a file, or creates it if it doesn't exist.
@@ -325,9 +351,19 @@ func (v *VirtualOS) Touch(ctx context.Context, path string) error {
 		return fmt.Errorf("%w: %s", ErrNotFound, path)
 	}
 
+	_, statErr := p.Stat(ctx, inner)
+	isNew := statErr != nil
+
 	// Fast path: provider implements Touchable
 	if t, ok := p.(Touchable); ok {
-		return t.Touch(ctx, inner)
+		if err := t.Touch(ctx, inner); err != nil {
+			return err
+		}
+		if isNew {
+			v.hub.emit(EventCreate, path)
+		}
+		v.hub.emit(EventWrite, path)
+		return nil
 	}
 
 	// Fallback: use Write to update timestamp or create empty file
@@ -338,18 +374,27 @@ func (v *VirtualOS) Touch(ctx context.Context, path string) error {
 
 	// If file exists and is readable, read content and rewrite to update timestamp
 	if r, rOk := p.(Readable); rOk {
-		if _, statErr := p.Stat(ctx, inner); statErr == nil {
+		if !isNew {
 			f, openErr := r.Open(ctx, inner)
 			if openErr == nil {
 				data, _ := io.ReadAll(f)
 				f.Close()
-				return w.Write(ctx, inner, bytes.NewReader(data))
+				if err := w.Write(ctx, inner, bytes.NewReader(data)); err != nil {
+					return err
+				}
+				v.hub.emit(EventWrite, path)
+				return nil
 			}
 		}
 	}
 
 	// File doesn't exist or not readable, create empty file
-	return w.Write(ctx, inner, strings.NewReader(""))
+	if err := w.Write(ctx, inner, strings.NewReader("")); err != nil {
+		return err
+	}
+	v.hub.emit(EventCreate, path)
+	v.hub.emit(EventWrite, path)
+	return nil
 }
 
 // Search performs a cross-mount search.
