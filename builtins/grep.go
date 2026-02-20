@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -17,6 +18,17 @@ type grepOpts struct {
 	lineNumber bool
 	count      bool
 	recursive  bool
+	wordMatch  bool
+	context    int
+	before     int
+	after      int
+	patterns   []string // -e patterns
+}
+
+type lineInfo struct {
+	num    int
+	text   string
+	matched bool
 }
 
 func builtinGrep(v *shellfish.VirtualOS) func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
@@ -27,12 +39,27 @@ func builtinGrep(v *shellfish.VirtualOS) func(ctx context.Context, args []string
 			return nil, err
 		}
 
-		if pattern == "" {
+		// Collect all patterns (from -e or positional arg)
+		allPatterns := opts.patterns
+		if pattern != "" {
+			allPatterns = append(allPatterns, pattern)
+		}
+
+		if len(allPatterns) == 0 {
 			return nil, fmt.Errorf("grep: missing pattern")
 		}
 
-		// Build regex
-		regexPattern := pattern
+		// Build regex - combine all patterns with alternation
+		var regexPattern string
+		if len(allPatterns) == 1 {
+			regexPattern = allPatterns[0]
+		} else {
+			// Join patterns with alternation
+			regexPattern = strings.Join(allPatterns, "|")
+		}
+		if opts.wordMatch {
+			regexPattern = `\b(` + regexPattern + `)\b`
+		}
 		if opts.ignoreCase {
 			regexPattern = "(?i)" + regexPattern
 		}
@@ -41,9 +68,28 @@ func builtinGrep(v *shellfish.VirtualOS) func(ctx context.Context, args []string
 			return nil, fmt.Errorf("grep: invalid pattern: %w", err)
 		}
 
+		// Get current working directory
 		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
+		}
+
+		// Expand wildcards in file arguments
+		files, err = expandWildcards(v, ctx, cwd, files)
+		if err != nil {
+			return nil, err
+		}
+
+		// Merge context options
+		contextBefore := opts.before
+		contextAfter := opts.after
+		if opts.context > 0 {
+			if contextBefore == 0 {
+				contextBefore = opts.context
+			}
+			if contextAfter == 0 {
+				contextAfter = opts.context
+			}
 		}
 
 		var result strings.Builder
@@ -53,8 +99,9 @@ func builtinGrep(v *shellfish.VirtualOS) func(ctx context.Context, args []string
 			if stdin == nil {
 				return nil, fmt.Errorf("grep: no input")
 			}
-			matchCount := grepReader(stdin, re, &opts, "", &result)
+			matchCount := grepReaderWithCtx(stdin, re, &opts, "", &result, contextBefore, contextAfter)
 			if opts.count {
+				result.Reset()
 				result.WriteString(fmt.Sprintf("%d\n", matchCount))
 			}
 			return io.NopCloser(strings.NewReader(result.String())), nil
@@ -65,19 +112,16 @@ func builtinGrep(v *shellfish.VirtualOS) func(ctx context.Context, args []string
 		for _, file := range files {
 			resolvedPath := resolvePath(cwd, file)
 
-			count, err := grepPath(v, resolvedPath, file, re, &opts, &result, ctx)
+			count, err := grepPath(v, resolvedPath, file, re, &opts, &result, ctx, contextBefore, contextAfter)
 			if err != nil {
 				return nil, err
 			}
 			totalCount += count
 		}
 
-		if opts.count {
-			if len(files) == 1 {
-				result.WriteString(fmt.Sprintf("%d\n", totalCount))
-			} else {
-				// For multiple files, count was already written per file
-			}
+		if opts.count && len(files) == 1 {
+			result.Reset()
+			result.WriteString(fmt.Sprintf("%d\n", totalCount))
 		}
 
 		return io.NopCloser(strings.NewReader(result.String())), nil
@@ -92,11 +136,16 @@ func parseGrepArgs(args []string, opts *grepOpts) (pattern string, files []strin
 			return "", nil, fmt.Errorf(`grep — search for patterns in files
 Usage: grep [OPTIONS] PATTERN [FILE]...
 Options:
-  -i, --ignore-case  Ignore case distinctions
-  -v, --invert-match Select non-matching lines
-  -n, --line-number  Print line number with output lines
-  -c, --count        Print only a count of matching lines
+  -i, --ignore-case   Ignore case distinctions
+  -v, --invert-match  Select non-matching lines
+  -n, --line-number   Print line number with output lines
+  -c, --count         Print only a count of matching lines
   -r, -R, --recursive Recursively search directories
+  -w, --word-regexp   Match only whole words
+  -e, --regexp PATTERN  Specify pattern(s) to search (can be used multiple times)
+  -C, --context NUM   Print NUM lines of context around matches
+  -B, --before-context NUM Print NUM lines before matches
+  -A, --after-context NUM  Print NUM lines after matches
 `)
 		case "-i", "--ignore-case":
 			opts.ignoreCase = true
@@ -108,8 +157,38 @@ Options:
 			opts.count = true
 		case "-r", "-R", "--recursive":
 			opts.recursive = true
+		case "-w", "--word-regexp":
+			opts.wordMatch = true
+		case "-e", "--regexp":
+			if i+1 < len(args) {
+				i++
+				opts.patterns = append(opts.patterns, args[i])
+			} else {
+				return "", nil, fmt.Errorf("grep: option requires an argument: %s", args[i-1])
+			}
+		case "-C", "--context":
+			if i+1 < len(args) {
+				i++
+				fmt.Sscanf(args[i], "%d", &opts.context)
+			} else {
+				return "", nil, fmt.Errorf("grep: option requires an argument: %s", args[i-1])
+			}
+		case "-B", "--before-context":
+			if i+1 < len(args) {
+				i++
+				fmt.Sscanf(args[i], "%d", &opts.before)
+			} else {
+				return "", nil, fmt.Errorf("grep: option requires an argument: %s", args[i-1])
+			}
+		case "-A", "--after-context":
+			if i+1 < len(args) {
+				i++
+				fmt.Sscanf(args[i], "%d", &opts.after)
+			} else {
+				return "", nil, fmt.Errorf("grep: option requires an argument: %s", args[i-1])
+			}
 		default:
-			if strings.HasPrefix(args[i], "-") && len(args[i]) > 1 {
+			if strings.HasPrefix(args[i], "-") && len(args[i]) > 1 && !isNumericArg(args[i]) {
 				// Combined short flags like -in
 				for _, c := range args[i][1:] {
 					switch c {
@@ -123,6 +202,8 @@ Options:
 						opts.count = true
 					case 'r', 'R':
 						opts.recursive = true
+					case 'w':
+						opts.wordMatch = true
 					default:
 						return "", nil, fmt.Errorf("grep: unknown option: -%c", c)
 					}
@@ -141,21 +222,76 @@ Options:
 	return pattern, files, nil
 }
 
-func grepReader(r io.Reader, re *regexp.Regexp, opts *grepOpts, filename string, result *strings.Builder) int {
+func isNumericArg(s string) bool {
+	if len(s) < 2 {
+		return false
+	}
+	for _, c := range s[1:] {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func grepReaderWithCtx(r io.Reader, re *regexp.Regexp, opts *grepOpts, filename string, result *strings.Builder, beforeCtx, afterCtx int) int {
+	// Read all lines first for context support
+	var lines []lineInfo
 	scanner := bufio.NewScanner(r)
 	lineNum := 0
-	matchCount := 0
-
 	for scanner.Scan() {
 		lineNum++
-		line := scanner.Text()
-		matched := re.MatchString(line)
+		text := scanner.Text()
+		matched := re.MatchString(text)
+		lines = append(lines, lineInfo{num: lineNum, text: text, matched: matched})
+	}
 
-		if matched != opts.invert {
-			matchCount++
-			if !opts.count {
-				writeLine(result, filename, lineNum, line, opts)
+	// If no context needed, use simple output
+	if beforeCtx == 0 && afterCtx == 0 {
+		matchCount := 0
+		for _, l := range lines {
+			if l.matched != opts.invert {
+				matchCount++
+				if !opts.count {
+					writeLine(result, filename, l.num, l.text, opts)
+				}
 			}
+		}
+		return matchCount
+	}
+
+	// With context - find lines to print
+	printLines := make(map[int]bool)
+	matchCount := 0
+
+	for i, l := range lines {
+		if l.matched != opts.invert {
+			matchCount++
+			// Mark the matched line
+			printLines[i] = true
+			// Mark before context
+			for j := 1; j <= beforeCtx && i-j >= 0; j++ {
+				printLines[i-j] = true
+			}
+			// Mark after context
+			for j := 1; j <= afterCtx && i+j < len(lines); j++ {
+				printLines[i+j] = true
+			}
+		}
+	}
+
+	// Output with group separators
+	lastPrinted := -2
+	for i, l := range lines {
+		if printLines[i] {
+			if !opts.count {
+				// Add separator for non-contiguous sections
+				if lastPrinted >= 0 && i > lastPrinted+1 && (beforeCtx > 0 || afterCtx > 0) {
+					result.WriteString("--\n")
+				}
+				writeLine(result, filename, l.num, l.text, opts)
+			}
+			lastPrinted = i
 		}
 	}
 
@@ -174,7 +310,7 @@ func writeLine(result *strings.Builder, filename string, lineNum int, line strin
 	}
 }
 
-func grepPath(v *shellfish.VirtualOS, path, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context) (int, error) {
+func grepPath(v *shellfish.VirtualOS, path, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context, beforeCtx, afterCtx int) (int, error) {
 	entry, err := v.Stat(ctx, path)
 	if err != nil {
 		return 0, fmt.Errorf("grep: %s: %w", displayPath, err)
@@ -184,7 +320,7 @@ func grepPath(v *shellfish.VirtualOS, path, displayPath string, re *regexp.Regex
 		if !opts.recursive {
 			return 0, fmt.Errorf("grep: %s: Is a directory", displayPath)
 		}
-		return grepDir(v, path, displayPath, re, opts, result, ctx)
+		return grepDir(v, path, displayPath, re, opts, result, ctx, beforeCtx, afterCtx)
 	}
 
 	reader, err := v.Open(ctx, path)
@@ -193,14 +329,14 @@ func grepPath(v *shellfish.VirtualOS, path, displayPath string, re *regexp.Regex
 	}
 	defer reader.Close()
 
-	count := grepReader(reader, re, opts, displayPath, result)
+	count := grepReaderWithCtx(reader, re, opts, displayPath, result, beforeCtx, afterCtx)
 	if opts.count {
 		result.WriteString(fmt.Sprintf("%s:%d\n", displayPath, count))
 	}
 	return count, nil
 }
 
-func grepDir(v *shellfish.VirtualOS, dirPath, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context) (int, error) {
+func grepDir(v *shellfish.VirtualOS, dirPath, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context, beforeCtx, afterCtx int) (int, error) {
 	entries, err := v.List(ctx, dirPath, shellfish.ListOpts{})
 	if err != nil {
 		return 0, fmt.Errorf("grep: %s: %w", displayPath, err)
@@ -212,13 +348,82 @@ func grepDir(v *shellfish.VirtualOS, dirPath, displayPath string, re *regexp.Reg
 		childPath := dirPath + "/" + name
 		childDisplay := displayPath + "/" + name
 
-		count, err := grepPath(v, childPath, childDisplay, re, opts, result, ctx)
+		count, err := grepPath(v, childPath, childDisplay, re, opts, result, ctx, beforeCtx, afterCtx)
 		if err != nil {
-			// Skip permission errors etc, continue with other files
 			continue
 		}
 		totalCount += count
 	}
 
 	return totalCount, nil
+}
+
+// hasWildcard checks if a string contains wildcard characters
+func hasWildcard(s string) bool {
+	return strings.ContainsAny(s, "*?[")
+}
+
+// expandWildcards expands wildcard patterns in file arguments
+func expandWildcards(v *shellfish.VirtualOS, ctx context.Context, cwd string, files []string) ([]string, error) {
+	if len(files) == 0 {
+		return files, nil
+	}
+
+	var expanded []string
+	for _, f := range files {
+		// Resolve the file path relative to cwd
+		dir := cwd
+		pattern := f
+
+		// If the path contains a directory component, separate them
+		if idx := strings.LastIndex(f, "/"); idx >= 0 {
+			dir = resolvePath(cwd, f[:idx])
+			pattern = f[idx+1:]
+		}
+
+		// Check if pattern contains wildcards
+		if !hasWildcard(pattern) {
+			// No wildcards, use as-is
+			expanded = append(expanded, f)
+			continue
+		}
+
+		// List directory and match against pattern
+		entries, err := v.List(ctx, dir, shellfish.ListOpts{})
+		if err != nil {
+			// If we can't list the directory, keep the original path
+			expanded = append(expanded, f)
+			continue
+		}
+
+		matched := false
+		for _, entry := range entries {
+			m, err := filepath.Match(pattern, entry.Name)
+			if err != nil {
+				continue
+			}
+			if m {
+				matched = true
+				fullPath := dir
+				if !strings.HasSuffix(fullPath, "/") {
+					fullPath += "/"
+				}
+				fullPath += entry.Name
+				// If original had directory prefix, preserve it in display
+				if strings.HasPrefix(f, "/") || strings.Contains(f[:strings.Index(f, "/")], "/") {
+					// Keep as absolute or relative path
+				} else if idx := strings.LastIndex(f, "/"); idx >= 0 {
+					fullPath = f[:idx+1] + entry.Name
+				}
+				expanded = append(expanded, fullPath)
+			}
+		}
+
+		// If no matches found, keep the original pattern
+		if !matched {
+			expanded = append(expanded, f)
+		}
+	}
+
+	return expanded, nil
 }

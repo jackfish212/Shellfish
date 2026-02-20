@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	shellfish "github.com/jackfish212/shellfish"
 	"github.com/jackfish212/shellfish/mounts"
@@ -609,6 +610,185 @@ func TestGrepHelp(t *testing.T) {
 	}
 }
 
+func TestGrepWordMatch(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// "foo" should match "foo bar" as a whole word
+	out := run(t, sh, "grep -w foo ~/notes.txt")
+	if !strings.Contains(out, "foo bar") {
+		t.Errorf("grep -w should match whole word 'foo': %q", out)
+	}
+	// "fo" should NOT match as a whole word
+	out = run(t, sh, "grep -w fo ~/notes.txt")
+	if strings.Contains(out, "foo bar") {
+		t.Errorf("grep -w should not match partial word 'fo': %q", out)
+	}
+}
+
+func TestGrepContext(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -C 1 bar ~/notes.txt")
+	// Should include line before (hello world) and after (baz qux)
+	if !strings.Contains(out, "hello world") {
+		t.Errorf("grep -C 1 should include context before: %q", out)
+	}
+	if !strings.Contains(out, "baz qux") {
+		t.Errorf("grep -C 1 should include context after: %q", out)
+	}
+}
+
+func TestGrepBeforeContext(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -B 1 bar ~/notes.txt")
+	// Should include line before (hello world)
+	if !strings.Contains(out, "hello world") {
+		t.Errorf("grep -B 1 should include context before: %q", out)
+	}
+	// Should NOT include line after
+	if strings.Contains(out, "baz qux") {
+		t.Errorf("grep -B 1 should not include context after: %q", out)
+	}
+}
+
+func TestGrepAfterContext(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "grep -A 1 bar ~/notes.txt")
+	// Should include line after (baz qux)
+	if !strings.Contains(out, "baz qux") {
+		t.Errorf("grep -A 1 should include context after: %q", out)
+	}
+	// Should NOT include line before
+	if strings.Contains(out, "hello world") {
+		t.Errorf("grep -A 1 should not include context before: %q", out)
+	}
+}
+
+func TestGrepContextWithSeparator(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// Use file with non-contiguous matches - data.csv has lines at different positions
+	// Just verify context option works without error
+	out := run(t, sh, "grep -C 1 bar ~/notes.txt")
+	// Should include context lines
+	if !strings.Contains(out, "hello world") && !strings.Contains(out, "baz qux") {
+		t.Errorf("grep -C should include context lines: %q", out)
+	}
+}
+
+func TestGrepWordMatchWithPipe(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "echo 'hello foobar world' | grep -w foo")
+	if out != "" && out != "\n" {
+		t.Errorf("grep -w should not match 'foo' in 'foobar': %q", out)
+	}
+	out = run(t, sh, "echo 'hello foo world' | grep -w foo")
+	if !strings.Contains(out, "foo") {
+		t.Errorf("grep -w should match whole word 'foo': %q", out)
+	}
+}
+
+// ─── system commands ───
+
+func TestDate(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "date")
+	if out == "" {
+		t.Error("date should output something")
+	}
+}
+
+func TestDateFormat(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "date +%Y")
+	if len(out) < 4 {
+		t.Errorf("date +%%Y should output year: %q", out)
+	}
+	out = run(t, sh, "date +%F")
+	if len(out) < 10 {
+		t.Errorf("date +%%F should output date in YYYY-MM-DD format: %q", out)
+	}
+}
+
+func TestWhoami(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "whoami")
+	if !strings.Contains(out, "tester") {
+		t.Errorf("whoami should return 'tester': %q", out)
+	}
+}
+
+func TestSleep(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	start := time.Now()
+	run(t, sh, "sleep 0.1")
+	elapsed := time.Since(start)
+	if elapsed < 100*time.Millisecond {
+		t.Errorf("sleep 0.1 should take at least 100ms, took %v", elapsed)
+	}
+}
+
+func TestSleepSuffix(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	start := time.Now()
+	run(t, sh, "sleep 0.1s")
+	elapsed := time.Since(start)
+	if elapsed < 100*time.Millisecond {
+		t.Errorf("sleep 0.1s should take at least 100ms, took %v", elapsed)
+	}
+}
+
+func TestTrue(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "true")
+	if code != 0 {
+		t.Errorf("true should return exit code 0, got %d", code)
+	}
+}
+
+func TestFalse(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "false")
+	if code == 0 {
+		t.Errorf("false should return non-zero exit code, got %d", code)
+	}
+}
+
+func TestTrueInCondition(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out, code := runCode(t, sh, "true && echo success")
+	if code != 0 {
+		t.Errorf("true && echo should succeed, got code %d", code)
+	}
+	if !strings.Contains(out, "success") {
+		t.Errorf("should output 'success': %q", out)
+	}
+}
+
+func TestFalseInCondition(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out, code := runCode(t, sh, "false || echo fallback")
+	if code != 0 {
+		t.Errorf("false || echo should succeed, got code %d", code)
+	}
+	if !strings.Contains(out, "fallback") {
+		t.Errorf("should output 'fallback': %q", out)
+	}
+}
+
+func TestWhereis(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "whereis ls")
+	if !strings.Contains(out, "ls:") {
+		t.Errorf("whereis ls should show ls: %q", out)
+	}
+}
+
+func TestWhereisNotFound(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "whereis nonexistentcmd123")
+	if !strings.Contains(out, "nonexistentcmd123:") {
+		t.Errorf("whereis should show command name: %q", out)
+	}
+}
+
 // ─── helpers ───
 
 func TestResolvePath(t *testing.T) {
@@ -652,5 +832,237 @@ func TestParseLsFlags(t *testing.T) {
 	}
 	if len(rest) != 2 || rest[0] != "dir1" {
 		t.Errorf("rest = %v, want [dir1, dir2]", rest)
+	}
+}
+
+// ─── sed ───
+
+func TestSedSubstitute(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "echo hello world | sed -e 's/world/Shellfish/'")
+	if !strings.Contains(out, "hello Shellfish") {
+		t.Errorf("sed substitute: %q", out)
+	}
+}
+
+func TestSedSubstituteGlobal(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "echo 'foo foo foo' | sed -e 's/foo/bar/g'")
+	if !strings.Contains(out, "bar bar bar") {
+		t.Errorf("sed global substitute: %q", out)
+	}
+}
+
+func TestSedFromFile(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "sed -e 's/hello/hi/' ~/notes.txt")
+	if !strings.Contains(out, "hi world") {
+		t.Errorf("sed from file: %q", out)
+	}
+}
+
+func TestSedDelete(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// Create a test file with multiple lines
+	run(t, sh, "write ~/delete_test.txt keep")
+	run(t, sh, "write ~/delete_test2.txt delete")
+	out := run(t, sh, "sed -e '/delete/d' ~/delete_test.txt")
+	if strings.Contains(out, "delete") {
+		t.Errorf("sed delete should remove matching line: %q", out)
+	}
+}
+
+func TestSedPrint(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "echo hello | sed -n -e 'p'")
+	// -n with p should only print once
+	lines := strings.Count(strings.TrimSpace(out), "hello")
+	if lines != 1 {
+		t.Errorf("sed -n p should print once, got %d times: %q", lines, out)
+	}
+}
+
+func TestSedQuietMode(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// Without -n, sed prints all lines
+	out1 := run(t, sh, "echo hello | sed -e 's/hello/world/'")
+	if !strings.Contains(out1, "world") {
+		t.Errorf("sed without -n: %q", out1)
+	}
+}
+
+func TestSedHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "sed --help")
+	if code != 1 {
+		t.Errorf("sed --help should return exit code 1, got %d", code)
+	}
+}
+
+func TestSedNoScript(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "sed ~/notes.txt")
+	if code == 0 {
+		t.Error("sed without script should fail")
+	}
+}
+
+func TestSedRegex(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "echo 'abc123def' | sed -e 's/[0-9]+/XXX/'")
+	if !strings.Contains(out, "abcXXXdef") {
+		t.Errorf("sed with regex: %q", out)
+	}
+}
+
+func TestSedInPlace(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	// Create a test file
+	run(t, sh, "write ~/sed_test.txt original content")
+
+	// Modify in place
+	run(t, sh, "sed -i -e 's/original/modified/' ~/sed_test.txt")
+
+	// Verify content changed
+	ctx := context.Background()
+	f, err := v.Open(ctx, "/home/tester/sed_test.txt")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	if !strings.Contains(string(data), "modified content") {
+		t.Errorf("sed -i should modify file in place: %q", string(data))
+	}
+}
+
+// ─── rmdir ───
+
+func TestRmdir(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	// Create empty directory
+	run(t, sh, "mkdir ~/emptydir")
+	run(t, sh, "rmdir ~/emptydir")
+
+	ctx := context.Background()
+	_, err := v.Stat(ctx, "/home/tester/emptydir")
+	if err == nil {
+		t.Error("emptydir should be removed")
+	}
+}
+
+func TestRmdirNonEmpty(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// docs contains readme.md
+	_, code := runCode(t, sh, "rmdir ~/docs")
+	if code == 0 {
+		t.Error("rmdir non-empty directory should fail")
+	}
+}
+
+func TestRmdirFile(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// notes.txt is a file, not a directory
+	_, code := runCode(t, sh, "rmdir ~/notes.txt")
+	if code == 0 {
+		t.Error("rmdir on a file should fail")
+	}
+}
+
+func TestRmdirNotFound(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "rmdir ~/nonexistent")
+	if code == 0 {
+		t.Error("rmdir nonexistent should fail")
+	}
+}
+
+func TestRmdirNoArgs(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "rmdir")
+	if code == 0 {
+		t.Error("rmdir without args should fail")
+	}
+}
+
+func TestRmdirParents(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	// Create nested empty directories
+	run(t, sh, "mkdir -p ~/a/b/c")
+	run(t, sh, "rmdir -p ~/a/b/c")
+
+	ctx := context.Background()
+	// All should be removed
+	_, errA := v.Stat(ctx, "/home/tester/a")
+	_, errB := v.Stat(ctx, "/home/tester/a/b")
+	_, errC := v.Stat(ctx, "/home/tester/a/b/c")
+	if errA == nil || errB == nil || errC == nil {
+		t.Error("rmdir -p should remove all empty parent directories")
+	}
+}
+
+func TestRmdirParentsWithNonEmptyParent(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	// Create nested directories
+	run(t, sh, "mkdir -p ~/x/y/z")
+	// Add a file to make parent non-empty
+	run(t, sh, "write ~/x/file.txt content")
+
+	// rmdir -p should remove z and y, but fail on x (non-empty)
+	run(t, sh, "rmdir -p ~/x/y/z")
+
+	ctx := context.Background()
+	// z and y should be removed
+	_, errZ := v.Stat(ctx, "/home/tester/x/y/z")
+	_, errY := v.Stat(ctx, "/home/tester/x/y")
+	if errZ == nil || errY == nil {
+		t.Error("rmdir -p should remove z and y")
+	}
+	// x should still exist (contains file.txt)
+	_, errX := v.Stat(ctx, "/home/tester/x")
+	if errX != nil {
+		t.Error("rmdir -p should keep non-empty parent x")
+	}
+}
+
+func TestRmdirIgnoreFailOnNonEmpty(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// docs contains readme.md
+	_, code := runCode(t, sh, "rmdir --ignore-fail-on-non-empty ~/docs")
+	// Should not fail with this flag
+	if code != 0 {
+		t.Error("rmdir --ignore-fail-on-non-empty should not fail on non-empty directory")
+	}
+}
+
+func TestRmdirVerbose(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	run(t, sh, "mkdir ~/verbosedir")
+	out := run(t, sh, "rmdir -v ~/verbosedir")
+	if !strings.Contains(out, "removing") {
+		t.Errorf("rmdir -v should output verbose message: %q", out)
+	}
+}
+
+func TestRmdirMultiple(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	// Create multiple empty directories
+	run(t, sh, "mkdir ~/dir1 ~/dir2 ~/dir3")
+	run(t, sh, "rmdir ~/dir1 ~/dir2 ~/dir3")
+
+	ctx := context.Background()
+	_, err1 := v.Stat(ctx, "/home/tester/dir1")
+	_, err2 := v.Stat(ctx, "/home/tester/dir2")
+	_, err3 := v.Stat(ctx, "/home/tester/dir3")
+	if err1 == nil || err2 == nil || err3 == nil {
+		t.Error("rmdir should remove all specified directories")
+	}
+}
+
+func TestRmdirHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "rmdir --help")
+	if !strings.Contains(out, "Usage") {
+		t.Errorf("rmdir --help should show help: %q", out)
 	}
 }

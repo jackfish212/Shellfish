@@ -75,6 +75,10 @@ func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string
 		Description: "Remove files or directories",
 		Usage:       "rm [-r|-rf] <path>...",
 	})
+	fs.AddExecFunc(prefix+"rmdir", builtinRmdir(v), mounts.FuncMeta{
+		Description: "Remove empty directories",
+		Usage:       "rmdir [-p] [--ignore-fail-on-non-empty] [-v] <directory>...",
+	})
 	fs.AddExecFunc(prefix+"mv", builtinMv(v), mounts.FuncMeta{
 		Description: "Move (rename) files",
 		Usage:       "mv <source> <dest>",
@@ -86,5 +90,33 @@ func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string
 	fs.AddExecFunc(prefix+"uname", builtinUname(), mounts.FuncMeta{
 		Description: "Print system information",
 		Usage:       "uname [-a|-s|-n|-r|-v|-m]",
+	})
+	fs.AddExecFunc(prefix+"date", builtinDate(v), mounts.FuncMeta{
+		Description: "Display the current date and time",
+		Usage:       "date [+FORMAT]",
+	})
+	fs.AddExecFunc(prefix+"whoami", builtinWhoami(v), mounts.FuncMeta{
+		Description: "Display the current user",
+		Usage:       "whoami",
+	})
+	fs.AddExecFunc(prefix+"sleep", builtinSleep(v), mounts.FuncMeta{
+		Description: "Delay for a specified time",
+		Usage:       "sleep NUMBER[SUFFIX]",
+	})
+	fs.AddExecFunc(prefix+"true", builtinTrue(v), mounts.FuncMeta{
+		Description: "Return success exit status",
+		Usage:       "true",
+	})
+	fs.AddExecFunc(prefix+"false", builtinFalse(v), mounts.FuncMeta{
+		Description: "Return failure exit status",
+		Usage:       "false",
+	})
+	fs.AddExecFunc(prefix+"whereis", builtinWhereis(v), mounts.FuncMeta{
+		Description: "Locate command files",
+		Usage:       "whereis COMMAND...",
+	})
+	fs.AddExecFunc(prefix+"sed", builtinSed(v), mounts.FuncMeta{
+		Description: "Stream editor for filtering and transforming text",
+		Usage:       "sed [-n] -e SCRIPT [FILE]...",
 	})
 }
