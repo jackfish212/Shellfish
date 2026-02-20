@@ -388,3 +388,45 @@ func TestVOSShell(t *testing.T) {
 		t.Errorf("USER = %q, want agent", sh.Env.Get("USER"))
 	}
 }
+
+// TestVOSMountWithoutPreExistingDir tests that mounting to a path that doesn't
+// exist in the parent filesystem should succeed. Mount points are virtual directories.
+func TestVOSMountWithoutPreExistingDir(t *testing.T) {
+	v := New()
+	root := mounts.NewMemFS(PermRW)
+	if err := v.Mount("/", root); err != nil {
+		t.Fatalf("Mount /: %v", err)
+	}
+
+	// Mount /data WITHOUT creating "data" directory in root memfs first
+	data := mounts.NewMemFS(PermRW)
+	if err := v.Mount("/data", data); err != nil {
+		t.Fatalf("Mount /data should succeed without pre-existing dir: %v", err)
+	}
+
+	// Verify /data exists as a virtual directory
+	ctx := context.Background()
+	entry, err := v.Stat(ctx, "/data")
+	if err != nil {
+		t.Fatalf("Stat /data: %v", err)
+	}
+	if !entry.IsDir {
+		t.Error("/data should be a directory")
+	}
+
+	// Verify we can write to /data
+	if err := v.Write(ctx, "/data/test.txt", strings.NewReader("hello")); err != nil {
+		t.Fatalf("Write /data/test.txt: %v", err)
+	}
+
+	// Verify we can read from /data
+	f, err := v.Open(ctx, "/data/test.txt")
+	if err != nil {
+		t.Fatalf("Open /data/test.txt: %v", err)
+	}
+	defer f.Close()
+	data2, _ := io.ReadAll(f)
+	if string(data2) != "hello" {
+		t.Errorf("content = %q, want hello", string(data2))
+	}
+}

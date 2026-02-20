@@ -39,36 +39,22 @@ func (v *VirtualOS) Mount(path string, p Provider) error {
 	parent := stdpath.Dir(path)
 	parent = CleanPath(parent)
 
-	pp, parentInner, parentErr := v.mounts.Resolve(parent)
+	// Check if parent path is resolvable or is a virtual directory (from other mounts)
+	_, _, parentErr := v.mounts.Resolve(parent)
 	if parentErr != nil {
+		// Parent doesn't exist in any filesystem, check if it's a virtual parent
 		if children := v.mounts.ChildMounts(parent); len(children) == 0 {
+			// Special case: mounting to empty root
 			if parent == "/" && len(v.mounts.All()) == 0 {
 				return v.mounts.Mount(path, p)
 			}
 			return fmt.Errorf("%w: %s", ErrParentNotExist, parent)
 		}
-		return v.mounts.Mount(path, p)
 	}
 
-	innerPath := path
-	if len(parent) > 1 {
-		innerPath = path[len(parent)+1:]
-	}
-
-	if parentInner == "" {
-		if stater, ok := pp.(interface {
-			Stat(context.Context, string) (*Entry, error)
-		}); ok {
-			entry, statErr := stater.Stat(context.Background(), innerPath)
-			if statErr != nil {
-				return fmt.Errorf("%w: %s is not a directory in parent provider", ErrParentNotExist, path)
-			}
-			if !entry.IsDir {
-				return fmt.Errorf("%w: %s is not a directory", ErrParentNotExist, path)
-			}
-		}
-	}
-
+	// Mount points are virtual directories and don't need to exist
+	// in the parent filesystem. The mount table will create them as
+	// virtual entries automatically via ChildMounts().
 	return v.mounts.Mount(path, p)
 }
 
@@ -87,6 +73,15 @@ func (v *VirtualOS) Stat(ctx context.Context, path string) (*Entry, error) {
 	path = CleanPath(path)
 
 	if p, inner, err := v.mounts.Resolve(path); err == nil {
+		// If inner is empty, this is a mount point itself - always return as directory
+		if inner == "" {
+			return &Entry{
+				Name:  baseName(path),
+				Path:  path,
+				IsDir: true,
+				Perm:  PermRW, // Mount points are always readable/writable
+			}, nil
+		}
 		if entry, statErr := p.Stat(ctx, inner); statErr == nil {
 			entry.Path = path
 			return entry, nil
