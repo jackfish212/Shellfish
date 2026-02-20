@@ -34,6 +34,9 @@ Tasks.md
 Task2.md
 .specstory/
 
+# Built binaries
+*.exe
+
 # Environment files
 .env
 *.env.local
