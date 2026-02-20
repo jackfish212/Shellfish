@@ -119,4 +119,8 @@ func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string
 		Description: "Stream editor for filtering and transforming text",
 		Usage:       "sed [-n] -e SCRIPT [FILE]...",
 	})
+	fs.AddExecFunc(prefix+"touch", builtinTouch(v), mounts.FuncMeta{
+		Description: "Update file timestamps or create empty files",
+		Usage:       "touch <file>...",
+	})
 }

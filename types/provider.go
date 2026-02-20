@@ -52,6 +52,13 @@ type Mutable interface {
 	Rename(ctx context.Context, oldPath, newPath string) error
 }
 
+// Touchable is optionally implemented by providers that can efficiently
+// update file timestamps without rewriting content. If not implemented,
+// the fallback uses Write to achieve the same effect.
+type Touchable interface {
+	Touch(ctx context.Context, path string) error
+}
+
 // MountInfoProvider is implemented by providers that can describe themselves.
 type MountInfoProvider interface {
 	MountInfo() (name, extra string)

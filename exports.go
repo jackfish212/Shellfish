@@ -27,6 +27,7 @@ type (
 	Searchable        = types.Searchable
 	MountInfoProvider = types.MountInfoProvider
 	Mutable           = types.Mutable
+	Touchable         = types.Touchable
 	ExecutableFile    = types.ExecutableFile
 )
 

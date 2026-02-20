@@ -1066,3 +1066,76 @@ func TestRmdirHelp(t *testing.T) {
 		t.Errorf("rmdir --help should show help: %q", out)
 	}
 }
+
+// ─── touch ───
+
+func TestTouchCreateNewFile(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	run(t, sh, "touch ~/newfile.txt")
+
+	ctx := context.Background()
+	entry, err := v.Stat(ctx, "/home/tester/newfile.txt")
+	if err != nil {
+		t.Fatalf("touch should create new file: %v", err)
+	}
+	if entry.IsDir {
+		t.Error("touched file should not be a directory")
+	}
+}
+
+func TestTouchUpdateExistingFile(t *testing.T) {
+	v, sh := setupTestEnv(t)
+
+	ctx := context.Background()
+	// Get original modification time
+	entryBefore, _ := v.Stat(ctx, "/home/tester/notes.txt")
+	modBefore := entryBefore.Modified
+
+	// Wait a bit to ensure time difference
+	time.Sleep(10 * time.Millisecond)
+
+	run(t, sh, "touch ~/notes.txt")
+
+	// Check modification time was updated
+	entryAfter, _ := v.Stat(ctx, "/home/tester/notes.txt")
+	if !entryAfter.Modified.After(modBefore) {
+		t.Errorf("touch should update modification time: before=%v, after=%v", modBefore, entryAfter.Modified)
+	}
+
+	// Content should remain unchanged
+	f, _ := v.Open(ctx, "/home/tester/notes.txt")
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	if !strings.Contains(string(data), "hello world") {
+		t.Errorf("touch should not change file content: %q", string(data))
+	}
+}
+
+func TestTouchMultipleFiles(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	run(t, sh, "touch ~/file1.txt ~/file2.txt ~/file3.txt")
+
+	ctx := context.Background()
+	for _, name := range []string{"/home/tester/file1.txt", "/home/tester/file2.txt", "/home/tester/file3.txt"} {
+		_, err := v.Stat(ctx, name)
+		if err != nil {
+			t.Errorf("touch should create %s: %v", name, err)
+		}
+	}
+}
+
+func TestTouchNoArgs(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "touch")
+	if code == 0 {
+		t.Error("touch without args should fail")
+	}
+}
+
+func TestTouchHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "touch --help")
+	if !strings.Contains(out, "Usage") {
+		t.Errorf("touch --help should show help: %q", out)
+	}
+}

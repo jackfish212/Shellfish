@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jackfish212/shellfish/types"
 )
@@ -17,6 +18,7 @@ var (
 	_ types.Writable   = (*LocalFS)(nil)
 	_ types.Searchable = (*LocalFS)(nil)
 	_ types.Mutable    = (*LocalFS)(nil)
+	_ types.Touchable  = (*LocalFS)(nil)
 )
 
 // LocalFS mounts a host directory into shellfish.
@@ -143,6 +145,27 @@ func (fs *LocalFS) Rename(_ context.Context, oldPath, newPath string) error {
 		return err
 	}
 	return os.Rename(hpOld, hpNew)
+}
+
+func (fs *LocalFS) Touch(_ context.Context, path string) error {
+	if !fs.perm.CanWrite() {
+		return fmt.Errorf("%w: %s", types.ErrNotWritable, path)
+	}
+	hp := fs.hostPath(path)
+	// If file exists, update modification time
+	if _, err := os.Stat(hp); err == nil {
+		return os.Chtimes(hp, time.Now(), time.Now())
+	}
+	// Create parent directories if needed
+	if err := os.MkdirAll(filepath.Dir(hp), 0o755); err != nil {
+		return err
+	}
+	// Create empty file
+	f, err := os.Create(hp)
+	if err != nil {
+		return err
+	}
+	return f.Close()
 }
 
 func (fs *LocalFS) Search(_ context.Context, query string, opts types.SearchOpts) ([]types.SearchResult, error) {

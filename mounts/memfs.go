@@ -20,6 +20,7 @@ var (
 	_ types.Writable   = (*MemFS)(nil)
 	_ types.Executable = (*MemFS)(nil)
 	_ types.Mutable    = (*MemFS)(nil)
+	_ types.Touchable  = (*MemFS)(nil)
 )
 
 // Func is the signature for functions registered as binaries.
@@ -359,6 +360,27 @@ func (fs *MemFS) Rename(_ context.Context, oldPath, newPath string) error {
 			delete(fs.files, k)
 			fs.files[newPrefix+rest] = v
 		}
+	}
+	return nil
+}
+
+func (fs *MemFS) Touch(_ context.Context, path string) error {
+	if !fs.perm.CanWrite() {
+		return fmt.Errorf("%w: %s", types.ErrNotWritable, path)
+	}
+
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	p := normPath(path)
+	if p == "" {
+		return fmt.Errorf("%w: cannot touch root", types.ErrNotSupported)
+	}
+
+	if f, ok := fs.files[p]; ok {
+		f.modified = time.Now()
+	} else {
+		fs.files[p] = &memFile{content: []byte{}, perm: fs.perm, modified: time.Now()}
 	}
 	return nil
 }

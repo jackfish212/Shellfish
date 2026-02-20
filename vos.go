@@ -1,6 +1,7 @@
 package shellfish
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -311,6 +312,44 @@ func (v *VirtualOS) Rename(ctx context.Context, oldPath, newPath string) error {
 	}
 
 	return m.Rename(ctx, innerOld, innerNew)
+}
+
+// Touch updates the modification time of a file, or creates it if it doesn't exist.
+// If the provider implements Touchable, it uses the efficient native implementation.
+// Otherwise, it falls back to reading and rewriting the file content (or creating empty).
+func (v *VirtualOS) Touch(ctx context.Context, path string) error {
+	path = CleanPath(path)
+
+	p, inner, err := v.mounts.Resolve(path)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrNotFound, path)
+	}
+
+	// Fast path: provider implements Touchable
+	if t, ok := p.(Touchable); ok {
+		return t.Touch(ctx, inner)
+	}
+
+	// Fallback: use Write to update timestamp or create empty file
+	w, wOk := p.(Writable)
+	if !wOk {
+		return fmt.Errorf("%w: %s (provider supports neither Touch nor Write)", ErrNotSupported, path)
+	}
+
+	// If file exists and is readable, read content and rewrite to update timestamp
+	if r, rOk := p.(Readable); rOk {
+		if _, statErr := p.Stat(ctx, inner); statErr == nil {
+			f, openErr := r.Open(ctx, inner)
+			if openErr == nil {
+				data, _ := io.ReadAll(f)
+				f.Close()
+				return w.Write(ctx, inner, bytes.NewReader(data))
+			}
+		}
+	}
+
+	// File doesn't exist or not readable, create empty file
+	return w.Write(ctx, inner, strings.NewReader(""))
 }
 
 // Search performs a cross-mount search.
