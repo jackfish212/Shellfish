@@ -6,29 +6,29 @@ import (
 	"strings"
 	"testing"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func setupTestEnv(t *testing.T) (*afs.VirtualOS, *afs.Shell) {
+func setupTestEnv(t *testing.T) (*shellfish.VirtualOS, *shellfish.Shell) {
 	t.Helper()
-	v := afs.New()
-	root := mounts.NewMemFS(afs.PermRW)
+	v := shellfish.New()
+	root := mounts.NewMemFS(shellfish.PermRW)
 	v.Mount("/", root)
 	root.AddDir("bin")
 	root.AddDir("usr")
 	root.AddDir("usr/bin")
 	root.AddDir("etc")
-	root.AddFile("etc/profile", []byte("export PATH=/usr/bin:/bin\n"), afs.PermRO)
+	root.AddFile("etc/profile", []byte("export PATH=/usr/bin:/bin\n"), shellfish.PermRO)
 	root.AddDir("home")
 	root.AddDir("home/tester")
 	root.AddDir("tmp")
 
-	root.AddFile("home/tester/notes.txt", []byte("hello world\nfoo bar\nbaz qux\n"), afs.PermRW)
-	root.AddFile("home/tester/data.csv", []byte("a,b,c\n1,2,3\n4,5,6\n"), afs.PermRW)
+	root.AddFile("home/tester/notes.txt", []byte("hello world\nfoo bar\nbaz qux\n"), shellfish.PermRW)
+	root.AddFile("home/tester/data.csv", []byte("a,b,c\n1,2,3\n4,5,6\n"), shellfish.PermRW)
 	root.AddDir("home/tester/docs")
-	root.AddFile("home/tester/docs/readme.md", []byte("# README\nProject docs"), afs.PermRO)
-	root.AddFile("home/tester/.hidden", []byte("secret"), afs.PermRO)
+	root.AddFile("home/tester/docs/readme.md", []byte("# README\nProject docs"), shellfish.PermRO)
+	root.AddFile("home/tester/.hidden", []byte("secret"), shellfish.PermRO)
 
 	RegisterBuiltinsOnFS(v, root)
 
@@ -36,14 +36,14 @@ func setupTestEnv(t *testing.T) (*afs.VirtualOS, *afs.Shell) {
 	return v, sh
 }
 
-func run(t *testing.T, sh *afs.Shell, cmd string) string {
+func run(t *testing.T, sh *shellfish.Shell, cmd string) string {
 	t.Helper()
 	ctx := context.Background()
 	result := sh.Execute(ctx, cmd)
 	return result.Output
 }
 
-func runCode(t *testing.T, sh *afs.Shell, cmd string) (string, int) {
+func runCode(t *testing.T, sh *shellfish.Shell, cmd string) (string, int) {
 	t.Helper()
 	ctx := context.Background()
 	result := sh.Execute(ctx, cmd)

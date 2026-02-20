@@ -99,8 +99,8 @@ Implements: `Provider`, `Readable`, `Writable`, `Executable`, `Mutable`
 The Swiss Army knife provider. Stores files and directories in memory. Supports registering Go functions as executable entries via `AddExecFunc()` — this is how builtins (`ls`, `cat`, `grep`, etc.) are implemented.
 
 ```go
-fs := mounts.NewMemFS(afs.PermRW)
-fs.AddFile("config.yaml", []byte("key: value"), afs.PermRO)
+fs := mounts.NewMemFS(shellfish.PermRW)
+fs.AddFile("config.yaml", []byte("key: value"), shellfish.PermRO)
 fs.AddExecFunc("hello", helloFunc, mounts.FuncMeta{
     Description: "Say hello",
     Usage:       "hello [name]",
@@ -114,7 +114,7 @@ Implements: `Provider`, `Readable`, `Writable`, `Searchable`, `Mutable`
 Maps a host directory into Shellfish. File operations delegate to the OS. Search performs recursive text matching.
 
 ```go
-fs := mounts.NewLocalFS("/home/user/projects", afs.PermRW)
+fs := mounts.NewLocalFS("/home/user/projects", shellfish.PermRW)
 v.Mount("/projects", fs)
 // Now: cat /projects/readme.md → reads /home/user/projects/readme.md
 ```
@@ -126,7 +126,7 @@ Implements: `Provider`, `Readable`, `Writable`, `Mutable`
 Stores files and metadata in a SQLite database. Useful for persisting agent memory, session logs, or any data that should survive process restarts without depending on a specific directory structure.
 
 ```go
-fs, _ := mounts.NewSQLiteFS("/var/data/agent.db", afs.PermRW)
+fs, _ := mounts.NewSQLiteFS("/var/data/agent.db", shellfish.PermRW)
 v.Mount("/memory", fs)
 ```
 

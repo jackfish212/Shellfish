@@ -2,9 +2,9 @@
 
 ## Provider Interfaces
 
-Package: `github.com/agentfs/afs/types`
+Package: `github.com/jackfish212/shellfish/types`
 
-Re-exported at package root: `github.com/agentfs/afs`
+Re-exported at package root: `github.com/jackfish212/shellfish`
 
 ### Provider
 
@@ -242,16 +242,16 @@ type SearchResult struct {
 
 ```go
 var (
-    ErrNotFound        = errors.New("afs: not found")
-    ErrNotExecutable   = errors.New("afs: not executable")
-    ErrNotReadable     = errors.New("afs: permission denied: not readable")
-    ErrNotWritable     = errors.New("afs: permission denied: not writable")
-    ErrIsDir           = errors.New("afs: is a directory")
-    ErrNotDir          = errors.New("afs: not a directory")
-    ErrAlreadyMounted  = errors.New("afs: path already mounted")
-    ErrMountUnderMount = errors.New("afs: mount under existing mount point")
-    ErrNotSupported    = errors.New("afs: operation not supported")
-    ErrParentNotExist  = errors.New("afs: parent directory does not exist")
+    ErrNotFound        = errors.New("shellfish: not found")
+    ErrNotExecutable   = errors.New("shellfish: not executable")
+    ErrNotReadable     = errors.New("shellfish: permission denied: not readable")
+    ErrNotWritable     = errors.New("shellfish: permission denied: not writable")
+    ErrIsDir           = errors.New("shellfish: is a directory")
+    ErrNotDir          = errors.New("shellfish: not a directory")
+    ErrAlreadyMounted  = errors.New("shellfish: path already mounted")
+    ErrMountUnderMount = errors.New("shellfish: mount under existing mount point")
+    ErrNotSupported    = errors.New("shellfish: operation not supported")
+    ErrParentNotExist  = errors.New("shellfish: parent directory does not exist")
 )
 ```
 
@@ -259,7 +259,7 @@ var (
 
 ## VirtualOS
 
-Package: `github.com/agentfs/afs`
+Package: `github.com/jackfish212/shellfish`
 
 ```go
 func New() *VirtualOS
@@ -304,9 +304,9 @@ type MountInfo struct {
 
 ## Shell
 
-Package: `github.com/agentfs/afs/shell`
+Package: `github.com/jackfish212/shellfish/shell`
 
-Re-exported at: `github.com/agentfs/afs`
+Re-exported at: `github.com/jackfish212/shellfish`
 
 ```go
 func NewShell(v VirtualOS, user string) *Shell
@@ -356,7 +356,7 @@ func (v VersionInfo) ProcVersion() string
 
 ## Providers
 
-Package: `github.com/agentfs/afs/mounts`
+Package: `github.com/jackfish212/shellfish/mounts`
 
 ### MemFS
 
@@ -426,11 +426,11 @@ type FuncMeta struct {
 
 ## Builtins
 
-Package: `github.com/agentfs/afs/builtins`
+Package: `github.com/jackfish212/shellfish/builtins`
 
 ```go
-func RegisterBuiltins(v *afs.VirtualOS, mountPath string) error
-func RegisterBuiltinsOnFS(v *afs.VirtualOS, fs *mounts.MemFS) error
+func RegisterBuiltins(v *shellfish.VirtualOS, mountPath string) error
+func RegisterBuiltinsOnFS(v *shellfish.VirtualOS, fs *mounts.MemFS) error
 ```
 
 Registered commands (at `/usr/bin/`):

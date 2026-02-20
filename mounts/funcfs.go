@@ -1,6 +1,6 @@
 package mounts
 
-import "github.com/agentfs/afs/types"
+import "github.com/jackfish212/shellfish/types"
 
 // FuncFS is deprecated. Use MemFS instead.
 type FuncFS = MemFS

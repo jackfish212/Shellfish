@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 )
 
 func setupSQLiteFS(t *testing.T) *SQLiteFS {

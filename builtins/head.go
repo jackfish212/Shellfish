@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinHead(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinHead(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`head — output the first part of files
@@ -23,7 +23,7 @@ Options:
 `)), nil
 		}
 
-		cwd := afs.Env(ctx, "PWD")
+		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}

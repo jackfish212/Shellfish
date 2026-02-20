@@ -1,9 +1,9 @@
-package afs
+package shellfish
 
 import (
 	"context"
 
-	"github.com/agentfs/afs/shell"
+	"github.com/jackfish212/shellfish/shell"
 )
 
 type envKey struct{}

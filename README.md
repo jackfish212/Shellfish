@@ -53,7 +53,7 @@ The AI agent infrastructure space is growing fast. Here's where Shellfish sits:
 ## Install
 
 ```bash
-go get github.com/agentfs/afs@latest
+go get github.com/jackfish212/shellfish@latest
 ```
 
 Requires Go 1.24+. The only external dependency is `modernc.org/sqlite` (pure Go, no CGO).
@@ -67,17 +67,17 @@ import (
     "context"
     "fmt"
 
-    "github.com/agentfs/afs"
-    "github.com/agentfs/afs/builtins"
-    "github.com/agentfs/afs/mounts"
+    "github.com/jackfish212/shellfish"
+    "github.com/jackfish212/shellfish/builtins"
+    "github.com/jackfish212/shellfish/mounts"
 )
 
 func main() {
-    v := afs.New()
-    rootFS, _ := afs.Configure(v)
+    v := shellfish.New()
+    rootFS, _ := shellfish.Configure(v)
     builtins.RegisterBuiltinsOnFS(v, rootFS)
 
-    v.Mount("/data", mounts.NewLocalFS(".", afs.PermRW))
+    v.Mount("/data", mounts.NewLocalFS(".", shellfish.PermRW))
 
     sh := v.Shell("agent")
     ctx := context.Background()
@@ -141,10 +141,10 @@ Implement `Provider` + whichever capability interfaces fit your data source:
 ```go
 type WikiProvider struct{ /* ... */ }
 
-func (w *WikiProvider) Stat(ctx context.Context, path string) (*afs.Entry, error) { /* ... */ }
-func (w *WikiProvider) List(ctx context.Context, path string, opts afs.ListOpts) ([]afs.Entry, error) { /* ... */ }
-func (w *WikiProvider) Open(ctx context.Context, path string) (afs.File, error) { /* ... */ }
-func (w *WikiProvider) Search(ctx context.Context, q string, opts afs.SearchOpts) ([]afs.SearchResult, error) { /* ... */ }
+func (w *WikiProvider) Stat(ctx context.Context, path string) (*shellfish.Entry, error) { /* ... */ }
+func (w *WikiProvider) List(ctx context.Context, path string, opts shellfish.ListOpts) ([]shellfish.Entry, error) { /* ... */ }
+func (w *WikiProvider) Open(ctx context.Context, path string) (shellfish.File, error) { /* ... */ }
+func (w *WikiProvider) Search(ctx context.Context, q string, opts shellfish.SearchOpts) ([]shellfish.SearchResult, error) { /* ... */ }
 
 v.Mount("/wiki", &WikiProvider{})
 // Now: cat /wiki/Go_(programming_language) | head -20
@@ -229,7 +229,7 @@ shellfish/
 
 See [`docs/`](docs/README.md) for full documentation:
 
-- **[Why Shellfish](docs/explanation/why-afs.md)** — Problem statement, positioning, comparisons
+- **[Why Shellfish](docs/explanation/why-shellfish.md)** — Problem statement, positioning, comparisons
 - **[Architecture](docs/explanation/architecture.md)** — VirtualOS, MountTable, Shell internals
 - **[Provider Model](docs/explanation/provider-model.md)** — Capability-based interface design
 - **[Shell as Interface](docs/explanation/shell-as-interface.md)** — Why shell beats tool APIs for agents

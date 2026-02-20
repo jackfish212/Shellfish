@@ -1,4 +1,4 @@
-// Package mounts provides built-in Mount implementations for AFS.
+// Package mounts provides built-in Mount implementations for shellfish.
 package mounts
 
 import "strings"

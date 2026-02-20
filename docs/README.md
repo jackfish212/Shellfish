@@ -6,7 +6,7 @@ Shellfish is a mount-based virtual userland for AI agents. It provides a unified
 
 Conceptual discussions about why Shellfish exists and how it works.
 
-- [Why Shellfish](explanation/why-afs.md) — The problem Shellfish solves and where it fits in the agent ecosystem
+- [Why Shellfish](explanation/why-shellfish.md) — The problem Shellfish solves and where it fits in the agent ecosystem
 - [Architecture](explanation/architecture.md) — Core design: VirtualOS, MountTable, Shell
 - [Provider Model](explanation/provider-model.md) — Capability-based interfaces and runtime detection
 - [Shell as Universal Interface](explanation/shell-as-interface.md) — Why shell commands beat tool APIs for agents

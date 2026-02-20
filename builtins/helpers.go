@@ -3,7 +3,7 @@ package builtins
 import (
 	"strings"
 
-	afs "github.com/agentfs/afs"
+	shellfish "github.com/jackfish212/shellfish"
 )
 
 func hasFlag(args []string, flags ...string) bool {
@@ -21,13 +21,13 @@ func hasFlag(args []string, flags ...string) bool {
 
 func resolvePath(cwd, p string) string {
 	if strings.HasPrefix(p, "/") {
-		return afs.CleanPath(p)
+		return shellfish.CleanPath(p)
 	}
 	p = strings.TrimPrefix(p, "./")
 	if cwd == "" || cwd == "/" {
-		return afs.CleanPath("/" + p)
+		return shellfish.CleanPath("/" + p)
 	}
-	return afs.CleanPath(cwd + "/" + p)
+	return shellfish.CleanPath(cwd + "/" + p)
 }
 
 func parseLsFlags(args []string) (bool, bool, []string) {

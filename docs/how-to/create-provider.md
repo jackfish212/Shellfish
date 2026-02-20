@@ -31,7 +31,7 @@ import (
     "strings"
     "time"
 
-    "github.com/agentfs/afs"
+    "github.com/jackfish212/shellfish"
 )
 
 type WeatherProvider struct {
@@ -47,19 +47,19 @@ func New(apiKey string, cities []string) *WeatherProvider {
 ### Step 2: Implement Provider (Stat + List)
 
 ```go
-func (wp *WeatherProvider) Stat(ctx context.Context, path string) (*afs.Entry, error) {
+func (wp *WeatherProvider) Stat(ctx context.Context, path string) (*shellfish.Entry, error) {
     path = strings.TrimPrefix(path, "/")
 
     if path == "" {
-        return &afs.Entry{Name: "weather", IsDir: true, Perm: afs.PermRO}, nil
+        return &shellfish.Entry{Name: "weather", IsDir: true, Perm: shellfish.PermRO}, nil
     }
 
     city := strings.TrimSuffix(path, ".md")
     for _, c := range wp.cities {
         if c == city {
-            return &afs.Entry{
+            return &shellfish.Entry{
                 Name:     city + ".md",
-                Perm:     afs.PermRO,
+                Perm:     shellfish.PermRO,
                 MimeType: "text/markdown",
                 Modified: time.Now(),
             }, nil
@@ -69,17 +69,17 @@ func (wp *WeatherProvider) Stat(ctx context.Context, path string) (*afs.Entry, e
     return nil, fmt.Errorf("not found: %s", path)
 }
 
-func (wp *WeatherProvider) List(ctx context.Context, path string, opts afs.ListOpts) ([]afs.Entry, error) {
+func (wp *WeatherProvider) List(ctx context.Context, path string, opts shellfish.ListOpts) ([]shellfish.Entry, error) {
     path = strings.TrimPrefix(path, "/")
     if path != "" {
         return nil, fmt.Errorf("not a directory: %s", path)
     }
 
-    entries := make([]afs.Entry, len(wp.cities))
+    entries := make([]shellfish.Entry, len(wp.cities))
     for i, city := range wp.cities {
-        entries[i] = afs.Entry{
+        entries[i] = shellfish.Entry{
             Name:     city + ".md",
-            Perm:     afs.PermRO,
+            Perm:     shellfish.PermRO,
             MimeType: "text/markdown",
         }
     }
@@ -90,7 +90,7 @@ func (wp *WeatherProvider) List(ctx context.Context, path string, opts afs.ListO
 ### Step 3: Implement Readable (Open)
 
 ```go
-func (wp *WeatherProvider) Open(ctx context.Context, path string) (afs.File, error) {
+func (wp *WeatherProvider) Open(ctx context.Context, path string) (shellfish.File, error) {
     path = strings.TrimPrefix(path, "/")
     city := strings.TrimSuffix(path, ".md")
 
@@ -99,9 +99,9 @@ func (wp *WeatherProvider) Open(ctx context.Context, path string) (afs.File, err
         return nil, err
     }
 
-    entry := &afs.Entry{Name: city + ".md", Perm: afs.PermRO}
+    entry := &shellfish.Entry{Name: city + ".md", Perm: shellfish.PermRO}
     reader := io.NopCloser(strings.NewReader(data))
-    return afs.NewFile(city+".md", entry, reader), nil
+    return shellfish.NewFile(city+".md", entry, reader), nil
 }
 
 func (wp *WeatherProvider) fetchWeather(city string) (string, error) {
@@ -113,8 +113,8 @@ func (wp *WeatherProvider) fetchWeather(city string) (string, error) {
 ### Step 4: Mount and use
 
 ```go
-v := afs.New()
-rootFS, _ := afs.Configure(v)
+v := shellfish.New()
+rootFS, _ := shellfish.Configure(v)
 builtins.RegisterBuiltinsOnFS(v, rootFS)
 
 wp := weather.New("api-key", []string{"tokyo", "london", "beijing"})
@@ -135,12 +135,12 @@ sh.Execute(ctx, "cat /weather/tokyo.md")
 If your data source supports queries, implement `Searchable`:
 
 ```go
-func (wp *WeatherProvider) Search(ctx context.Context, query string, opts afs.SearchOpts) ([]afs.SearchResult, error) {
-    var results []afs.SearchResult
+func (wp *WeatherProvider) Search(ctx context.Context, query string, opts shellfish.SearchOpts) ([]shellfish.SearchResult, error) {
+    var results []shellfish.SearchResult
     for _, city := range wp.cities {
         if strings.Contains(strings.ToLower(city), strings.ToLower(query)) {
-            results = append(results, afs.SearchResult{
-                Entry: afs.Entry{Name: city + ".md", Path: city + ".md"},
+            results = append(results, shellfish.SearchResult{
+                Entry: shellfish.Entry{Name: city + ".md", Path: city + ".md"},
                 Score: 1.0,
             })
         }

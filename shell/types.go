@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 )
 
 // VirtualOS is the interface that shell needs from VirtualOS.

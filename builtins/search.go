@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinSearch(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinSearch(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`search — cross-mount search
@@ -50,11 +50,11 @@ Usage: search <query> [--scope <path>] [--max N]
 		if len(args) == 0 {
 			return nil, fmt.Errorf("search: missing query")
 		}
-		cwd := afs.Env(ctx, "PWD")
+		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
-		opts := afs.SearchOpts{MaxResults: 20}
+		opts := shellfish.SearchOpts{MaxResults: 20}
 		query := args[0]
 		for i := 1; i < len(args); i++ {
 			switch args[i] {

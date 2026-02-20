@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 )
 
 // MCPClient abstracts the Model Context Protocol client.
@@ -315,14 +315,16 @@ func (p *MCPResourceProvider) Search(ctx context.Context, query string, _ types.
 }
 
 // MountMCP registers an MCP server's tools+prompts and resources as separate providers.
-func MountMCP(v interface{ Mount(string, types.Provider) error }, basePath string, client MCPClient) error {
+func MountMCP(v interface {
+	Mount(string, types.Provider) error
+}, basePath string, client MCPClient) error {
 	if err := v.Mount(basePath+"/tools", NewMCPToolProvider(client)); err != nil {
 		return err
 	}
 	return v.Mount(basePath+"/data", NewMCPResourceProvider(client))
 }
 
-func cliName(name string) string        { return strings.ReplaceAll(name, "_", "-") }
+func cliName(name string) string { return strings.ReplaceAll(name, "_", "-") }
 func resourceFileName(r MCPResource) string {
 	if r.Name != "" {
 		return r.Name

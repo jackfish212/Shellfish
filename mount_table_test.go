@@ -1,11 +1,11 @@
-package afs
+package shellfish
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 )
 
 type stubProvider struct{}

@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinLs(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinLs(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, _ io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("ls — list directory entries\nUsage: ls [path...]\n")), nil
@@ -18,7 +18,7 @@ func builtinLs(v *afs.VirtualOS) mounts.ExecFunc {
 
 		showLong, showAll, filteredArgs := parseLsFlags(args)
 
-		cwd := afs.Env(ctx, "PWD")
+		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -40,20 +40,20 @@ func builtinLs(v *afs.VirtualOS) mounts.ExecFunc {
 				buf.WriteString(target)
 				buf.WriteString(":\n")
 			}
-			entries, err := v.List(ctx, target, afs.ListOpts{})
+			entries, err := v.List(ctx, target, shellfish.ListOpts{})
 			if err != nil {
 				if entry, statErr := v.Stat(ctx, target); statErr == nil {
-					entries = []afs.Entry{*entry}
+					entries = []shellfish.Entry{*entry}
 				} else {
 					return nil, fmt.Errorf("ls: %w", err)
 				}
 			}
 			if len(entries) == 0 {
 				if entry, statErr := v.Stat(ctx, target); statErr == nil {
-					entries = []afs.Entry{*entry}
+					entries = []shellfish.Entry{*entry}
 				}
 			}
-			var filteredEntries []afs.Entry
+			var filteredEntries []shellfish.Entry
 			for _, e := range entries {
 				if !showAll && strings.HasPrefix(e.Name, ".") {
 					continue

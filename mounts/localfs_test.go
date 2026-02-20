@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 )
 
 func setupLocalFS(t *testing.T) (*LocalFS, string) {
@@ -288,4 +288,3 @@ func TestLocalFSMountInfo(t *testing.T) {
 		t.Error("MountInfo extra should not be empty")
 	}
 }
-

@@ -1,4 +1,4 @@
-package afs
+package shellfish
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agentfs/afs/mounts"
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/mounts"
+	"github.com/jackfish212/shellfish/types"
 )
 
 const defaultPath = "/usr/bin:/sbin"
@@ -56,21 +56,21 @@ func MountRootFS(v *VirtualOS) (*mounts.MemFS, error) {
 // Configure sets up a VirtualOS with standard filesystem structure,
 // /proc, and all built-in commands. Returns the root MemFS for further customization.
 func Configure(v *VirtualOS) (*mounts.MemFS, error) {
-	slog.Debug("afs: starting configuration")
+	slog.Debug("shellfish: starting configuration")
 	rootFS, err := MountRootFS(v)
 	if err != nil {
-		slog.Error("afs: failed to mount root filesystem", "error", err)
+		slog.Error("shellfish: failed to mount root filesystem", "error", err)
 		return nil, err
 	}
-	slog.Info("afs: root filesystem mounted")
+	slog.Info("shellfish: root filesystem mounted")
 
 	if err := MountProc(v); err != nil {
-		slog.Error("afs: failed to mount /proc", "error", err)
+		slog.Error("shellfish: failed to mount /proc", "error", err)
 		return nil, err
 	}
-	slog.Info("afs: /proc mounted")
+	slog.Info("shellfish: /proc mounted")
 
-	slog.Debug("afs: configuration complete")
+	slog.Debug("shellfish: configuration complete")
 	return rootFS, nil
 }
 

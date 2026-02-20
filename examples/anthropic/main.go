@@ -22,12 +22,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/agentfs/afs"
-	"github.com/agentfs/afs/builtins"
-	"github.com/agentfs/afs/mounts"
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/builtins"
+	"github.com/jackfish212/shellfish/mounts"
 	"github.com/joho/godotenv"
 )
 
@@ -43,21 +43,21 @@ func main() {
 		log.Println("Using environment variables instead.")
 	}
 	// Initialize Shellfish VirtualOS
-	v := afs.New()
-	rootFS, err := afs.Configure(v)
+	v := shellfish.New()
+	rootFS, err := shellfish.Configure(v)
 	if err != nil {
 		panic(err)
 	}
 	builtins.RegisterBuiltinsOnFS(v, rootFS)
 
 	// Mount an in-memory filesystem for the project
-	memFS := mounts.NewMemFS(afs.PermRW)
+	memFS := mounts.NewMemFS(shellfish.PermRW)
 	if err := v.Mount("/project", memFS); err != nil {
 		panic(fmt.Errorf("failed to mount /project: %w", err))
 	}
 
 	// Mount a local filesystem for persistent data storage
-	localFS := mounts.NewLocalFS(filepath.Join(".", "localfs-data"), afs.PermRW)
+	localFS := mounts.NewLocalFS(filepath.Join(".", "localfs-data"), shellfish.PermRW)
 	if err := v.Mount("/data", localFS); err != nil {
 		panic(fmt.Errorf("failed to mount /data: %w", err))
 	}
@@ -115,7 +115,7 @@ func main() {
 	}
 }
 
-func runInteractiveMode(ctx context.Context, v *afs.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
+func runInteractiveMode(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
 	fmt.Println("Interactive Mode")
 	fmt.Println("=============== ")
 	fmt.Println("Type your message and press Enter to chat with the agent.")
@@ -153,7 +153,7 @@ func runInteractiveMode(ctx context.Context, v *afs.VirtualOS, client anthropic.
 	}
 }
 
-func runDefaultTask(ctx context.Context, v *afs.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
+func runDefaultTask(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
 	// Default task: cross-filesystem task between memfs (/project) and localfs (/data)
 	task := `You have access to TWO filesystems:
 - /project (in-memory filesystem) - contains source code
@@ -200,7 +200,7 @@ Use shell commands to work across both filesystems. The /data filesystem persist
 	fmt.Println(result)
 }
 
-func processAgentLoop(ctx context.Context, v *afs.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
+func processAgentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
 	for {
 		resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 			Model:     anthropic.ModelClaudeSonnet4_5_20250929,
@@ -260,7 +260,7 @@ func processAgentLoop(ctx context.Context, v *afs.VirtualOS, client anthropic.Cl
 	return messages
 }
 
-func setupVirtualProject(v *afs.VirtualOS) {
+func setupVirtualProject(v *shellfish.VirtualOS) {
 	ctx := context.Background()
 
 	// Create README.md
@@ -485,7 +485,7 @@ require (
 	v.Write(ctx, "/project/config.json", strings.NewReader(config))
 }
 
-func executeShell(v *afs.VirtualOS, command string) string {
+func executeShell(v *shellfish.VirtualOS, command string) string {
 	sh := v.Shell("agent")
 	result := sh.Execute(context.Background(), command)
 

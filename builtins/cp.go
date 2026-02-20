@@ -7,11 +7,11 @@ import (
 	"path"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinCp(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinCp(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`cp — copy files
@@ -41,7 +41,7 @@ Options:
 			return nil, fmt.Errorf("cp: missing operand")
 		}
 
-		cwd := afs.Env(ctx, "PWD")
+		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -68,7 +68,7 @@ Options:
 }
 
 // copyEntry copies a file or directory from src to dst
-func copyEntry(ctx context.Context, v *afs.VirtualOS, src, dst string, dstIsDir, recursive bool, out *strings.Builder) error {
+func copyEntry(ctx context.Context, v *shellfish.VirtualOS, src, dst string, dstIsDir, recursive bool, out *strings.Builder) error {
 	srcEntry, err := v.Stat(ctx, src)
 	if err != nil {
 		return fmt.Errorf("cp: cannot stat %q: %w", src, err)
@@ -91,7 +91,7 @@ func copyEntry(ctx context.Context, v *afs.VirtualOS, src, dst string, dstIsDir,
 }
 
 // copyFile copies a single file
-func copyFile(ctx context.Context, v *afs.VirtualOS, src, dst string, out *strings.Builder) error {
+func copyFile(ctx context.Context, v *shellfish.VirtualOS, src, dst string, out *strings.Builder) error {
 	// Open source file
 	rc, err := v.Open(ctx, src)
 	if err != nil {
@@ -109,14 +109,14 @@ func copyFile(ctx context.Context, v *afs.VirtualOS, src, dst string, out *strin
 }
 
 // copyDir recursively copies a directory
-func copyDir(ctx context.Context, v *afs.VirtualOS, src, dst string, out *strings.Builder) error {
+func copyDir(ctx context.Context, v *shellfish.VirtualOS, src, dst string, out *strings.Builder) error {
 	// Create destination directory
-	if err := v.Mkdir(ctx, dst, afs.PermRWX); err != nil {
+	if err := v.Mkdir(ctx, dst, shellfish.PermRWX); err != nil {
 		return fmt.Errorf("cp: cannot create directory %q: %w", dst, err)
 	}
 
 	// List source directory contents
-	entries, err := v.List(ctx, src, afs.ListOpts{})
+	entries, err := v.List(ctx, src, shellfish.ListOpts{})
 	if err != nil {
 		return fmt.Errorf("cp: cannot list %q: %w", src, err)
 	}

@@ -14,7 +14,7 @@ type hereDocInfo struct {
 	quoted    bool
 }
 
-// Shell provides a command-line interface to AFS operations.
+// Shell provides a command-line interface to shellfish operations.
 type Shell struct {
 	vos         VirtualOS
 	Env         *ShellEnv
@@ -273,7 +273,7 @@ func (s *Shell) absPath(p string) string {
 	return cleanPath(s.Env.Get("PWD") + "/" + p)
 }
 
-// cleanPath normalises an AFS path: forward-slashes, no trailing slash,
+// cleanPath normalises an shellfish path: forward-slashes, no trailing slash,
 // always starts with "/".
 func cleanPath(p string) string {
 	p = strings.ReplaceAll(p, "\\", "/")

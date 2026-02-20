@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinFind(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinFind(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, _ io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`find — search for files in a directory hierarchy
@@ -25,7 +25,7 @@ Expressions:
 `)), nil
 		}
 
-		cwd := afs.Env(ctx, "PWD")
+		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -123,7 +123,7 @@ type findOptions struct {
 	minDepth int
 }
 
-func findRecursive(ctx context.Context, v *afs.VirtualOS, dir string, depth int, opts findOptions, results *[]string) error {
+func findRecursive(ctx context.Context, v *shellfish.VirtualOS, dir string, depth int, opts findOptions, results *[]string) error {
 	if opts.maxDepth >= 0 && depth > opts.maxDepth {
 		return nil
 	}
@@ -138,7 +138,7 @@ func findRecursive(ctx context.Context, v *afs.VirtualOS, dir string, depth int,
 	}
 
 	if entry, err := v.Stat(ctx, dir); err == nil && entry.IsDir {
-		entries, err := v.List(ctx, dir, afs.ListOpts{})
+		entries, err := v.List(ctx, dir, shellfish.ListOpts{})
 		if err != nil {
 			return nil
 		}
@@ -156,7 +156,7 @@ func findRecursive(ctx context.Context, v *afs.VirtualOS, dir string, depth int,
 	return nil
 }
 
-func matchesFindCriteria(entry *afs.Entry, opts findOptions) bool {
+func matchesFindCriteria(entry *shellfish.Entry, opts findOptions) bool {
 	if opts.fileType != "" {
 		switch opts.fileType {
 		case "f":

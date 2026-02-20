@@ -1,24 +1,24 @@
 package builtins
 
 import (
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-// RegisterBuiltins mounts standard AFS utilities at the given path (e.g. "/bin").
-func RegisterBuiltins(v *afs.VirtualOS, mountPath string) error {
-	fs := mounts.NewMemFS(afs.PermRW)
+// RegisterBuiltins mounts standard shellfish utilities at the given path (e.g. "/bin").
+func RegisterBuiltins(v *shellfish.VirtualOS, mountPath string) error {
+	fs := mounts.NewMemFS(shellfish.PermRW)
 	registerAllBuiltins(v, fs, "")
 	return v.Mount(mountPath, fs)
 }
 
-// RegisterBuiltinsOnFS registers standard AFS utilities on the given MemFS at /usr/bin.
-func RegisterBuiltinsOnFS(v *afs.VirtualOS, fs *mounts.MemFS) error {
+// RegisterBuiltinsOnFS registers standard shellfish utilities on the given MemFS at /usr/bin.
+func RegisterBuiltinsOnFS(v *shellfish.VirtualOS, fs *mounts.MemFS) error {
 	registerAllBuiltins(v, fs, "usr/bin/")
 	return nil
 }
 
-func registerAllBuiltins(v *afs.VirtualOS, fs *mounts.MemFS, prefix string) {
+func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string) {
 	fs.AddExecFunc(prefix+"ls", builtinLs(v), mounts.FuncMeta{
 		Description: "List directory entries",
 		Usage:       "ls [path]",

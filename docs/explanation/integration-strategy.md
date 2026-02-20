@@ -38,16 +38,16 @@ The most direct integration. Any Go program imports Shellfish as a library:
 
 ```go
 import (
-    "github.com/agentfs/afs"
-    "github.com/agentfs/afs/builtins"
-    "github.com/agentfs/afs/mounts"
+    "github.com/jackfish212/shellfish"
+    "github.com/jackfish212/shellfish/builtins"
+    "github.com/jackfish212/shellfish/mounts"
 )
 
-v := afs.New()
-rootFS, _ := afs.Configure(v)
+v := shellfish.New()
+rootFS, _ := shellfish.Configure(v)
 builtins.RegisterBuiltinsOnFS(v, rootFS)
 
-v.Mount("/data", mounts.NewLocalFS("/workspace", afs.PermRW))
+v.Mount("/data", mounts.NewLocalFS("/workspace", shellfish.PermRW))
 
 sh := v.Shell("agent")
 result := sh.Execute(ctx, "ls /data")
@@ -68,22 +68,22 @@ The MCP server exposes Shellfish operations as tools:
 
 | Tool | Description |
 |------|-------------|
-| `afs_shell` | Execute a shell command (the primary interface) |
-| `afs_read` | Read a file (convenience shortcut) |
-| `afs_write` | Write to a file |
-| `afs_search` | Cross-mount search |
-| `afs_mount` | List or manage mount points |
+| `shellfish_shell` | Execute a shell command (the primary interface) |
+| `shellfish_read` | Read a file (convenience shortcut) |
+| `shellfish_write` | Write to a file |
+| `shellfish_search` | Cross-mount search |
+| `shellfish_mount` | List or manage mount points |
 
-The `afs_shell` tool is the most important — it provides access to the full shell with pipes, redirects, and all builtins through a single tool call.
+The `shellfish_shell` tool is the most important — it provides access to the full shell with pipes, redirects, and all builtins through a single tool call.
 
 ### Resources
 
 Shellfish also exposes content through MCP Resources:
 
 ```
-afs://mounts         → current mount table
-afs://tree/{path}    → directory tree at path
-afs://file/{path}    → file content
+shellfish://mounts         → current mount table
+shellfish://tree/{path}    → directory tree at path
+shellfish://file/{path}    → file content
 ```
 
 This allows MCP clients to browse Shellfish content without tool calls — useful for context injection.
@@ -110,9 +110,9 @@ OpenClaw supports MCP servers through its plugin system. Shellfish connects as a
 Once connected, OpenClaw's agent can use Shellfish through natural shell commands:
 
 ```
-> afs_shell "ls /data"
-> afs_shell "cat /docs/api-guide.md | grep authentication"
-> afs_shell "search 'error handling' --scope /data"
+> shellfish_shell "ls /data"
+> shellfish_shell "cat /docs/api-guide.md | grep authentication"
+> shellfish_shell "search 'error handling' --scope /data"
 ```
 
 ### Integration with Claude Desktop
@@ -135,7 +135,7 @@ Claude Desktop natively supports MCP servers. Add Shellfish to `claude_desktop_c
 [9P](https://en.wikipedia.org/wiki/9P_(protocol)) is Plan 9's file protocol — a minimal, well-defined protocol for accessing remote filesystems. It's the ideal cross-language bridge for Shellfish because:
 
 1. **True POSIX semantics.** Any language can `open()`, `read()`, `write()` files over 9P.
-2. **Kernel-level mounting.** On Linux: `mount -t 9p localhost /mnt/afs`. The filesystem appears natively.
+2. **Kernel-level mounting.** On Linux: `mount -t 9p localhost /mnt/shellfish`. The filesystem appears natively.
 3. **Minimal protocol.** ~13 message types. Implementations exist in Go, Python, Rust, C, Java.
 4. **No code generation.** Unlike gRPC, clients don't need generated stubs.
 
@@ -150,22 +150,22 @@ shellfish-server --9p :5640 --mount /data:./workspace
 Mount it on Linux:
 
 ```bash
-mount -t 9p -o port=5640,trans=tcp localhost /mnt/afs
+mount -t 9p -o port=5640,trans=tcp localhost /mnt/shellfish
 ```
 
 Now any program — Python, Rust, shell scripts — accesses Shellfish through standard file I/O:
 
 ```python
 # Python agent accessing Shellfish
-with open("/mnt/afs/data/report.md") as f:
+with open("/mnt/shellfish/data/report.md") as f:
     content = f.read()
 
-os.listdir("/mnt/afs/tools/")
+os.listdir("/mnt/shellfish/tools/")
 ```
 
 ```bash
 # Shell script
-cat /mnt/afs/data/config.yaml | grep database
+cat /mnt/shellfish/data/config.yaml | grep database
 ```
 
 ### 9P vs. gRPC vs. REST

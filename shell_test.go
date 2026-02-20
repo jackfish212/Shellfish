@@ -1,4 +1,4 @@
-package afs_test
+package shellfish_test
 
 import (
 	"context"
@@ -6,24 +6,24 @@ import (
 	"strings"
 	"testing"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/builtins"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/builtins"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func setupShell(t *testing.T) (*afs.Shell, *afs.VirtualOS) {
+func setupShell(t *testing.T) (*shellfish.Shell, *shellfish.VirtualOS) {
 	t.Helper()
-	v := afs.New()
-	root := mounts.NewMemFS(afs.PermRW)
+	v := shellfish.New()
+	root := mounts.NewMemFS(shellfish.PermRW)
 	v.Mount("/", root)
 	root.AddDir("bin")
 	root.AddDir("usr")
 	root.AddDir("usr/bin")
 	root.AddDir("etc")
-	root.AddFile("etc/profile", []byte("export PATH=/usr/bin:/bin\n"), afs.PermRO)
+	root.AddFile("etc/profile", []byte("export PATH=/usr/bin:/bin\n"), shellfish.PermRO)
 	root.AddDir("home")
 	root.AddDir("home/tester")
-	root.AddFile("home/tester/hello.txt", []byte("hello world"), afs.PermRW)
+	root.AddFile("home/tester/hello.txt", []byte("hello world"), shellfish.PermRW)
 	root.AddDir("tmp")
 
 	builtins.RegisterBuiltinsOnFS(v, root)

@@ -185,7 +185,7 @@ func TestErrorsSentinel(t *testing.T) {
 	if ErrNotFound == nil {
 		t.Error("ErrNotFound should not be nil")
 	}
-	if ErrNotFound.Error() != "afs: not found" {
+	if ErrNotFound.Error() != "shellfish: not found" {
 		t.Errorf("ErrNotFound = %q", ErrNotFound.Error())
 	}
 }

@@ -5,11 +5,11 @@ import (
 	"io"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinMount(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinMount(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, _ io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("mount — list mount points\nUsage: mount\n")), nil
@@ -29,8 +29,8 @@ func builtinMount(v *afs.VirtualOS) mounts.ExecFunc {
 	}
 }
 
-func getMountInfo(p afs.Provider) (typ, extra string) {
-	if mip, ok := p.(afs.MountInfoProvider); ok {
+func getMountInfo(p shellfish.Provider) (typ, extra string) {
+	if mip, ok := p.(shellfish.MountInfoProvider); ok {
 		return mip.MountInfo()
 	}
 	return "unknown", "-"

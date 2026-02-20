@@ -85,7 +85,7 @@ The Shell is Shellfish's primary interaction interface. It provides a familiar c
 The `Configure()` function sets up a standard filesystem layout:
 
 ```go
-rootFS, err := afs.Configure(v)
+rootFS, err := shellfish.Configure(v)
 ```
 
 This:
@@ -97,7 +97,7 @@ After `Configure()`, you mount your own providers and register additional builti
 
 ```go
 builtins.RegisterBuiltinsOnFS(v, rootFS)   // adds ls, cat, write, etc.
-v.Mount("/data", mounts.NewLocalFS("/workspace", afs.PermRW))
+v.Mount("/data", mounts.NewLocalFS("/workspace", shellfish.PermRW))
 ```
 
 ## Concurrency Model

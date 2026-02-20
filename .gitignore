@@ -33,3 +33,7 @@ NAME.md
 Tasks.md
 Task2.md
 .specstory/
+
+# Environment files
+.env
+*.env.local

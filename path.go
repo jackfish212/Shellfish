@@ -1,11 +1,11 @@
-package afs
+package shellfish
 
 import (
 	"path"
 	"strings"
 )
 
-// CleanPath normalises an AFS path: forward-slashes, no trailing slash,
+// CleanPath normalises an shellfish path: forward-slashes, no trailing slash,
 // always starts with "/".
 func CleanPath(p string) string {
 	p = strings.ReplaceAll(p, "\\", "/")

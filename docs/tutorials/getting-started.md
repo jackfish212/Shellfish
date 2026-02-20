@@ -10,7 +10,7 @@ This tutorial walks you through setting up Shellfish, mounting data sources, and
 ## Install
 
 ```bash
-go get github.com/agentfs/afs@latest
+go get github.com/jackfish212/shellfish@latest
 ```
 
 ## Minimal Example
@@ -24,17 +24,17 @@ import (
     "context"
     "fmt"
 
-    "github.com/agentfs/afs"
-    "github.com/agentfs/afs/builtins"
-    "github.com/agentfs/afs/mounts"
+    "github.com/jackfish212/shellfish"
+    "github.com/jackfish212/shellfish/builtins"
+    "github.com/jackfish212/shellfish/mounts"
 )
 
 func main() {
     // 1. Create the virtual OS
-    v := afs.New()
+    v := shellfish.New()
 
     // 2. Configure standard filesystem layout (/bin, /usr, /etc, /proc, ...)
-    rootFS, err := afs.Configure(v)
+    rootFS, err := shellfish.Configure(v)
     if err != nil {
         panic(err)
     }
@@ -43,7 +43,7 @@ func main() {
     builtins.RegisterBuiltinsOnFS(v, rootFS)
 
     // 4. Mount a local directory
-    v.Mount("/data", mounts.NewLocalFS(".", afs.PermRW))
+    v.Mount("/data", mounts.NewLocalFS(".", shellfish.PermRW))
 
     // 5. Create a shell and run commands
     sh := v.Shell("agent")
@@ -70,7 +70,7 @@ You'll see a listing of your current directory under `/data` and the Shellfish v
 You can add files directly to the root MemFS:
 
 ```go
-rootFS.AddFile("etc/motd", []byte("Welcome to Shellfish\n"), afs.PermRO)
+rootFS.AddFile("etc/motd", []byte("Welcome to Shellfish\n"), shellfish.PermRO)
 
 result := sh.Execute(ctx, "cat /etc/motd")
 // Output: Welcome to Shellfish
@@ -126,7 +126,7 @@ sh.Execute(ctx, "mkdir /tmp/work && echo 'created' || echo 'failed'")
 ## Mounting SQLite for Persistence
 
 ```go
-sqlFS, err := mounts.NewSQLiteFS("/var/data/memory.db", afs.PermRW)
+sqlFS, err := mounts.NewSQLiteFS("/var/data/memory.db", shellfish.PermRW)
 if err != nil {
     panic(err)
 }

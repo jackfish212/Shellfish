@@ -8,7 +8,7 @@ import (
 // Entry represents a file, directory, or executable in the virtual filesystem.
 type Entry struct {
 	Name     string            // base name
-	Path     string            // full path within AFS
+	Path     string            // full path within shellfish
 	IsDir    bool              // true if directory
 	Perm     Perm              // permission bits
 	Size     int64             // size in bytes (0 for dirs / executables)

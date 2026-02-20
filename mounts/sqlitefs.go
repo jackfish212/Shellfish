@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 
 	_ "modernc.org/sqlite"
 )

@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinMv(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinMv(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("mv — move (rename) files\nUsage: mv <source> <dest>\n")), nil
@@ -18,7 +18,7 @@ func builtinMv(v *afs.VirtualOS) mounts.ExecFunc {
 		if len(args) < 2 {
 			return nil, fmt.Errorf("mv: missing operand")
 		}
-		cwd := afs.Env(ctx, "PWD")
+		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}

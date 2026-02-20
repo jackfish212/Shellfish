@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 	_ types.Mutable    = (*LocalFS)(nil)
 )
 
-// LocalFS mounts a host directory into AFS.
+// LocalFS mounts a host directory into shellfish.
 type LocalFS struct {
 	root string
 	perm types.Perm

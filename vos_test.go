@@ -1,4 +1,4 @@
-package afs
+package shellfish
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/agentfs/afs/mounts"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
 func setupVOS(t *testing.T) *VirtualOS {

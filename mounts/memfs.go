@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/agentfs/afs/types"
+	"github.com/jackfish212/shellfish/types"
 )
 
 var (
@@ -169,7 +169,7 @@ func (fs *MemFS) List(_ context.Context, path string, _ types.ListOpts) ([]types
 		if isImplicitDir {
 			entries = append(entries, types.Entry{Name: name, Path: prefix + name, IsDir: true, Perm: types.PermRX})
 		} else {
-			entries = append(entries, *f.toEntry(prefix+name))
+			entries = append(entries, *f.toEntry(prefix + name))
 		}
 	}
 

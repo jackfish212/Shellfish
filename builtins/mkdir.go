@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func builtinMkdir(v *afs.VirtualOS) mounts.ExecFunc {
+func builtinMkdir(v *shellfish.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("mkdir — create directories\nUsage: mkdir [-p] <path>...\n")), nil
@@ -18,7 +18,7 @@ func builtinMkdir(v *afs.VirtualOS) mounts.ExecFunc {
 		if len(args) == 0 {
 			return nil, fmt.Errorf("mkdir: missing operand")
 		}
-		cwd := afs.Env(ctx, "PWD")
+		cwd := shellfish.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -29,7 +29,7 @@ func builtinMkdir(v *afs.VirtualOS) mounts.ExecFunc {
 				continue
 			}
 			target := resolvePath(cwd, arg)
-			if err := v.Mkdir(ctx, target, afs.PermRWX); err != nil {
+			if err := v.Mkdir(ctx, target, shellfish.PermRWX); err != nil {
 				fmt.Fprintf(&out, "mkdir: %v\n", err)
 				continue
 			}

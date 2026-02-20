@@ -1,4 +1,4 @@
-package afs
+package shellfish
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/agentfs/afs/shell"
+	"github.com/jackfish212/shellfish/shell"
 )
 
 // VirtualOS is the top-level orchestrator. It owns the mount table and

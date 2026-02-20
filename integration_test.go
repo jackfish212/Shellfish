@@ -1,4 +1,4 @@
-package afs_test
+package shellfish_test
 
 import (
 	"context"
@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	afs "github.com/agentfs/afs"
-	"github.com/agentfs/afs/builtins"
-	"github.com/agentfs/afs/mounts"
+	shellfish "github.com/jackfish212/shellfish"
+	"github.com/jackfish212/shellfish/builtins"
+	"github.com/jackfish212/shellfish/mounts"
 )
 
-func setupIntegration(t *testing.T) (*afs.VirtualOS, *afs.Shell) {
+func setupIntegration(t *testing.T) (*shellfish.VirtualOS, *shellfish.Shell) {
 	t.Helper()
-	v := afs.New()
-	rootFS, err := afs.Configure(v)
+	v := shellfish.New()
+	rootFS, err := shellfish.Configure(v)
 	if err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
@@ -22,8 +22,8 @@ func setupIntegration(t *testing.T) (*afs.VirtualOS, *afs.Shell) {
 
 	rootFS.AddDir("home/agent")
 	rootFS.AddDir("home/agent/memory")
-	rootFS.AddFile("home/agent/memory/facts.json", []byte(`{"name":"test-agent"}`), afs.PermRW)
-	rootFS.AddFile("home/agent/memory/daily/2026-02-20.md", []byte("# Today\n- worked on AFS tests\n"), afs.PermRW)
+	rootFS.AddFile("home/agent/memory/facts.json", []byte(`{"name":"test-agent"}`), shellfish.PermRW)
+	rootFS.AddFile("home/agent/memory/daily/2026-02-20.md", []byte("# Today\n- worked on shellfish tests\n"), shellfish.PermRW)
 
 	sh := v.Shell("agent")
 	return v, sh
@@ -163,9 +163,9 @@ func TestIntegrationEnvironmentVariables(t *testing.T) {
 	_, sh := setupIntegration(t)
 	ctx := context.Background()
 
-	sh.Env.Set("GREETING", "hello_afs")
+	sh.Env.Set("GREETING", "hello_shellfish")
 	result := sh.Execute(ctx, "echo $GREETING")
-	if !strings.Contains(result.Output, "hello_afs") {
+	if !strings.Contains(result.Output, "hello_shellfish") {
 		t.Errorf("env expansion: %q", result.Output)
 	}
 
@@ -178,7 +178,7 @@ func TestIntegrationEnvironmentVariables(t *testing.T) {
 func TestIntegrationMultiMountSearch(t *testing.T) {
 	v, sh := setupIntegration(t)
 
-	local := mounts.NewLocalFS(t.TempDir(), afs.PermRW)
+	local := mounts.NewLocalFS(t.TempDir(), shellfish.PermRW)
 	v.Mount("/ext", local)
 
 	ctx := context.Background()

@@ -1,4 +1,4 @@
-module github.com/agentfs/afs
+module github.com/jackfish212/shellfish
 
 go 1.24.0
 
