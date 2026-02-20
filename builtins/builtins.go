@@ -123,4 +123,8 @@ func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string
 		Description: "Update file timestamps or create empty files",
 		Usage:       "touch <file>...",
 	})
+	fs.AddExecFunc(prefix+"wc", builtinWc(v), mounts.FuncMeta{
+		Description: "Print newline, word, and byte counts",
+		Usage:       "wc [-l|-w|-m|-c|-L] [FILE]...",
+	})
 }
