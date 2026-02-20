@@ -113,6 +113,7 @@ Providers only implement what they support — no stub methods, no unused interf
 | `SQLiteFS` | R/W/Mut | Persistent filesystem backed by a single SQLite file |
 | `MCPToolProvider` | R/X/S | Bridge MCP server tools as executable entries |
 | `MCPResourceProvider` | R/S | Bridge MCP server resources as readable entries |
+| `VikingProvider` | R/W/S/Mut | Bridge [OpenViking](https://github.com/volcengine/OpenViking) context database with L0/L1/L2 tiered loading |
 
 ### Shell everything
 
@@ -171,10 +172,20 @@ Shellfish is not an agent framework — it's the runtime layer underneath. Expos
 | Protocol | Use case | Status |
 |----------|----------|--------|
 | **Go SDK** | Embed directly in Go agent code | Available |
-| **MCP Server** | Connect to OpenClaw, Claude Desktop, or any MCP client | Planned |
+| **MCP Server** | Connect to Claude Desktop, Cursor, or any MCP client | Available |
 | **9P Server** | Cross-language POSIX access — `mount -t 9p` then use standard file I/O from Python, Rust, etc. | Planned |
 
-### As an MCP server (planned)
+### As an MCP server
+
+Install and run:
+
+```bash
+go install github.com/jackfish212/shellfish/cmd/shellfish-server@latest
+
+shellfish-server --mount /data:./workspace --mount /memory:sqlite:memory.db
+```
+
+Configure in Claude Desktop (`claude_desktop_config.json`) or any MCP client:
 
 ```json
 {
@@ -187,27 +198,37 @@ Shellfish is not an agent framework — it's the runtime layer underneath. Expos
 }
 ```
 
-Any MCP-compatible agent (OpenClaw, Claude Desktop, ...) gets a single `shell` tool:
+The agent gets a single `shell` tool — one tool replaces dozens:
 
 ```
 shell("cat /data/src/main.go | grep TODO")
-shell("search 'authentication' --scope /data --max 5")
+shell("ls /data && search 'authentication' --scope /data --max 5")
+shell("echo 'task done' >> /memory/log.md")
 ```
 
-### With OpenViking (planned)
+Mount sources:
+- `--mount /path:./dir` — host directory (LocalFS)
+- `--mount /path:sqlite:file.db` — SQLite database (SQLiteFS)
+- `--mount /path:memfs` — in-memory (MemFS)
 
-Mount OpenViking as a provider to combine semantic retrieval with the shell interface:
+### With OpenViking
+
+Mount [OpenViking](https://github.com/volcengine/OpenViking) as a provider to combine semantic retrieval with the shell interface:
 
 ```go
-viking := providers.NewViking("http://localhost:8000")
-v.Mount("/ctx", viking)
+import "github.com/jackfish212/shellfish/mounts"
+
+client := mounts.NewVikingClient("http://localhost:1933", "your-api-key")
+v.Mount("/ctx", mounts.NewVikingProvider(client, ""))
 ```
 
 ```bash
-cat /ctx/resources/project/.abstract     # L0: ~100 tokens summary
-cat /ctx/resources/project/.overview     # L1: ~2K tokens overview
-cat /ctx/resources/project/docs/api.md   # L2: full content
-search "auth flow" /ctx/                 # directory-recursive semantic search
+ls /ctx/resources/                        # browse context tree
+cat /ctx/resources/project/.abstract      # L0: ~100 tokens summary
+cat /ctx/resources/project/.overview      # L1: ~2K tokens overview
+cat /ctx/resources/project/docs/api.md    # L2: full content
+search "auth flow" --scope /ctx           # directory-recursive semantic search
+echo "https://example.com/doc.md" > /ctx/resources/new_doc  # add resource
 ```
 
 ## Project Structure
@@ -222,6 +243,8 @@ shellfish/
 ├── mounts/             # Built-in providers: MemFS, LocalFS, SQLiteFS, MCP
 ├── builtins/           # Commands: ls, cat, grep, search, find, ...
 ├── shell/              # Shell: pipes, redirects, env, history, profile
+├── mcpserver/          # MCP server: expose VirtualOS as MCP tools over stdio
+├── cmd/shellfish-server/ # Standalone MCP server binary
 └── docs/               # Documentation (Diataxis)
 ```
 
