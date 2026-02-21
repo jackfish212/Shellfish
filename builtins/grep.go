@@ -189,8 +189,11 @@ Options:
 			}
 		default:
 			if strings.HasPrefix(args[i], "-") && len(args[i]) > 1 && !isNumericArg(args[i]) {
-				// Combined short flags like -in
-				for _, c := range args[i][1:] {
+				// Combined short flags like -in, or flags with numbers like -B1, -A2
+				remaining := args[i][1:]
+				for len(remaining) > 0 {
+					c := rune(remaining[0])
+					remaining = remaining[1:]
 					switch c {
 					case 'i':
 						opts.ignoreCase = true
@@ -204,6 +207,30 @@ Options:
 						opts.recursive = true
 					case 'w':
 						opts.wordMatch = true
+					case 'B':
+						// Parse number that follows
+						numStr := extractNumber(remaining)
+						if numStr == "" {
+							return "", nil, fmt.Errorf("grep: option requires a number: -B")
+						}
+						fmt.Sscanf(numStr, "%d", &opts.before)
+						remaining = remaining[len(numStr):]
+					case 'A':
+						// Parse number that follows
+						numStr := extractNumber(remaining)
+						if numStr == "" {
+							return "", nil, fmt.Errorf("grep: option requires a number: -A")
+						}
+						fmt.Sscanf(numStr, "%d", &opts.after)
+						remaining = remaining[len(numStr):]
+					case 'C':
+						// Parse number that follows
+						numStr := extractNumber(remaining)
+						if numStr == "" {
+							return "", nil, fmt.Errorf("grep: option requires a number: -C")
+						}
+						fmt.Sscanf(numStr, "%d", &opts.context)
+						remaining = remaining[len(numStr):]
 					default:
 						return "", nil, fmt.Errorf("grep: unknown option: -%c", c)
 					}
@@ -232,6 +259,19 @@ func isNumericArg(s string) bool {
 		}
 	}
 	return true
+}
+
+// extractNumber extracts leading digits from a string
+func extractNumber(s string) string {
+	var result string
+	for _, c := range s {
+		if c >= '0' && c <= '9' {
+			result += string(c)
+		} else {
+			break
+		}
+	}
+	return result
 }
 
 func grepReaderWithCtx(r io.Reader, re *regexp.Regexp, opts *grepOpts, filename string, result *strings.Builder, beforeCtx, afterCtx int) int {
