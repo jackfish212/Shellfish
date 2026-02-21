@@ -4,12 +4,19 @@ go 1.24.3
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.26.0
+	github.com/jackfish212/dbfs v0.0.0
+	github.com/jackfish212/httpfs v0.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/nlpodyssey/openai-agents-go v0.1.0
 	github.com/openai/openai-go/v2 v2.5.0
 	github.com/rwtodd/Go.Sed v0.0.0-20250326002959-ba712dc84b62
 	github.com/thedevsaddam/gojsonq/v2 v2.5.2
-	modernc.org/sqlite v1.45.0
+	modernc.org/sqlite v1.46.1
+)
+
+replace (
+	github.com/jackfish212/dbfs => ../dbfs
+	github.com/jackfish212/httpfs => ../httpfs
 )
 
 require (

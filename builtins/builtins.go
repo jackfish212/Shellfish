@@ -51,6 +51,10 @@ func registerAllBuiltins(v *grasp.VirtualOS, fs *mounts.MemFS, prefix string) {
 		Description: "List mount points",
 		Usage:       "mount",
 	})
+	fs.AddExecFunc(prefix+"bind", builtinBind(v), mounts.FuncMeta{
+		Description: "Plan 9-style union bind",
+		Usage:       "bind [-b|-a] source_path target_path",
+	})
 	fs.AddExecFunc(prefix+"which", builtinWhich(v), mounts.FuncMeta{
 		Description: "Show full path of command",
 		Usage:       "which <command>...",
