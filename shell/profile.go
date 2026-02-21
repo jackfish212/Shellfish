@@ -59,9 +59,7 @@ func (s *Shell) loadProfileFile(ctx context.Context, path string) {
 }
 
 func parseExportLine(line string) (string, string) {
-	if strings.HasPrefix(line, "export ") {
-		line = strings.TrimPrefix(line, "export ")
-	}
+	line = strings.TrimPrefix(line, "export ")
 	eqIdx := strings.Index(line, "=")
 	if eqIdx <= 0 {
 		return "", ""

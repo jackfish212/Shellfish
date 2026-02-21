@@ -164,10 +164,6 @@ func TestNewExecutableFile(t *testing.T) {
 		return io.NopCloser(strings.NewReader("executed: " + strings.Join(args, ","))), nil
 	})
 
-	if _, ok := ef.(ExecutableFile); !ok {
-		t.Fatal("should implement ExecutableFile")
-	}
-
 	rc, err := ef.Exec(context.Background(), []string{"a", "b"}, nil)
 	if err != nil {
 		t.Fatalf("Exec error: %v", err)

@@ -51,6 +51,9 @@ func TestMountTableMountAndResolve(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve /data/sub/deep: %v", err)
 	}
+	if got != p {
+		t.Error("Resolve returned wrong provider for deeply nested path")
+	}
 	if inner != "sub/deep" {
 		t.Errorf("inner = %q, want %q", inner, "sub/deep")
 	}

@@ -483,13 +483,13 @@ func TestResourceFileName(t *testing.T) {
 
 func TestMCPMountInfo(t *testing.T) {
 	toolProvider := NewMCPToolProvider(&mockMCPClient{})
-	name, extra := toolProvider.MountInfo()
+	name, _ := toolProvider.MountInfo()
 	if name != "mcp" {
 		t.Errorf("MCPToolProvider MountInfo name = %q, want mcp", name)
 	}
 
 	resourceProvider := NewMCPResourceProvider(&mockMCPClient{})
-	name, extra = resourceProvider.MountInfo()
+	name, extra := resourceProvider.MountInfo()
 	if name != "mcp" {
 		t.Errorf("MCPResourceProvider MountInfo name = %q, want mcp", name)
 	}
