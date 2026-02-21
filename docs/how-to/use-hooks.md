@@ -1,6 +1,6 @@
 # Reactive Agents with Hooks
 
-Shellfish provides two mechanisms for building reactive agents that respond to filesystem changes and command execution:
+GRASP provides two mechanisms for building reactive agents that respond to filesystem changes and command execution:
 
 1. **Watch** — inotify-style filesystem event notifications
 2. **OnExec** — post-execution hooks for shell commands
@@ -12,10 +12,10 @@ These enable agents to observe user activity and provide contextual assistance.
 Use `Watch()` to monitor filesystem changes:
 
 ```go
-import "github.com/jackfish212/shellfish"
+import "github.com/jackfish212/grasp"
 
 // Create watcher for specific path and event types
-watcher := v.Watch("/workspace", shellfish.EventAll)
+watcher := v.Watch("/workspace", grasp.EventAll)
 
 // Available event types:
 //   EventCreate - file/directory created
@@ -35,11 +35,11 @@ for {
         fmt.Printf("Event: %s on %s\n", event.Type, event.Path)
 
         switch event.Type {
-        case shellfish.EventWrite:
+        case grasp.EventWrite:
             // File was modified
             content, _ := sh.Execute(ctx, "cat "+event.Path)
             analyzeChange(content)
-        case shellfish.EventCreate:
+        case grasp.EventCreate:
             // New file created
             fmt.Printf("New file: %s\n", event.Path)
         }
@@ -53,8 +53,8 @@ for {
 ### Combining with Agent
 
 ```go
-func runWatcherAgent(ctx context.Context, v *shellfish.VirtualOS, client *anthropic.Client) {
-    watcher := v.Watch("/workspace", shellfish.EventWrite)
+func runWatcherAgent(ctx context.Context, v *grasp.VirtualOS, client *anthropic.Client) {
+    watcher := v.Watch("/workspace", grasp.EventWrite)
 
     for {
         select {
@@ -115,7 +115,7 @@ type ExecResult struct {
 ### Auto-Help on Failure
 
 ```go
-func setupAutoHelp(sh *shellfish.Shell, client *anthropic.Client) {
+func setupAutoHelp(sh *grasp.Shell, client *anthropic.Client) {
     sh.OnExec(func(cmdLine string, result *shell.ExecResult) {
         if result.Code == 0 {
             return // Success, no action needed
@@ -163,24 +163,24 @@ import (
     "syscall"
 
     "github.com/anthropics/anthropic-sdk-go"
-    "github.com/jackfish212/shellfish"
-    "github.com/jackfish212/shellfish/builtins"
-    "github.com/jackfish212/shellfish/mounts"
-    "github.com/jackfish212/shellfish/shell"
+    "github.com/jackfish212/grasp"
+    "github.com/jackfish212/grasp/builtins"
+    "github.com/jackfish212/grasp/mounts"
+    "github.com/jackfish212/grasp/shell"
 )
 
 type MonitorAgent struct {
-    v      *shellfish.VirtualOS
-    sh     *shellfish.Shell
+    v      *grasp.VirtualOS
+    sh     *grasp.Shell
     client *anthropic.Client
 }
 
 func main() {
     // Setup
-    v := shellfish.New()
-    rootFS, _ := shellfish.Configure(v)
+    v := grasp.New()
+    rootFS, _ := grasp.Configure(v)
     builtins.RegisterBuiltinsOnFS(v, rootFS)
-    v.Mount("/workspace", mounts.NewLocalFS(".", shellfish.PermRW))
+    v.Mount("/workspace", mounts.NewLocalFS(".", grasp.PermRW))
 
     agent := &MonitorAgent{
         v:      v,
@@ -200,7 +200,7 @@ func main() {
 }
 
 func (a *MonitorAgent) watchFiles(ctx context.Context) {
-    watcher := a.v.Watch("/workspace", shellfish.EventWrite|shellfish.EventCreate)
+    watcher := a.v.Watch("/workspace", grasp.EventWrite|grasp.EventCreate)
 
     for {
         select {
@@ -215,7 +215,7 @@ func (a *MonitorAgent) watchFiles(ctx context.Context) {
     }
 }
 
-func (a *MonitorAgent) handleFileEvent(ctx context.Context, event shellfish.WatchEvent) {
+func (a *MonitorAgent) handleFileEvent(ctx context.Context, event grasp.WatchEvent) {
     fmt.Printf("\n📁 File change detected: %s (%s)\n", event.Path, event.Type)
 
     // Read file content
@@ -319,7 +319,7 @@ func (d *Debouncer) Debounce(key string, duration time.Duration, fn func()) {
 // Usage
 debouncer := &Debouncer{timers: make(map[string]*time.Timer)}
 
-watcher := v.Watch("/workspace", shellfish.EventWrite)
+watcher := v.Watch("/workspace", grasp.EventWrite)
 for event := range watcher.Events {
     debouncer.Debounce(event.Path, 500*time.Millisecond, func() {
         analyzeFile(event.Path)
@@ -332,7 +332,7 @@ for event := range watcher.Events {
 Only watch relevant paths:
 
 ```go
-watcher := v.Watch("/workspace/src", shellfish.EventWrite)
+watcher := v.Watch("/workspace/src", grasp.EventWrite)
 
 // Or filter in the handler
 for event := range watcher.Events {

@@ -1,4 +1,4 @@
-package shellfish
+package grasp
 
 import (
 	"strings"

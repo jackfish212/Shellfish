@@ -1,15 +1,15 @@
-// Package shellfish implements an Agent File System that provides a unified
+// Package grasp implements an Agent File System that provides a unified
 // filesystem interface where everything — files, tools, services — is accessed
 // through mount points.
 //
 // The key abstraction is Provider: a minimal interface (Stat + List) that every
 // data source implements. Additional capabilities (Readable, Writable,
 // Executable, Searchable) are detected at runtime via type assertions.
-package shellfish
+package grasp
 
 import (
-	"github.com/jackfish212/shellfish/shell"
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/shell"
+	"github.com/jackfish212/grasp/types"
 )
 
 type (

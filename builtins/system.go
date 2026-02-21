@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
 // date — display the current date and time
-func builtinDate(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinDate(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`date — display the current date and time
@@ -64,7 +64,7 @@ func formatTimeString(t time.Time, format string) string {
 }
 
 // whoami — display the current user
-func builtinWhoami(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinWhoami(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`whoami — display the current user
@@ -72,7 +72,7 @@ Usage: whoami
 `)), nil
 		}
 
-		user := shellfish.Env(ctx, "USER")
+		user := grasp.Env(ctx, "USER")
 		if user == "" {
 			user = "unknown"
 		}
@@ -81,7 +81,7 @@ Usage: whoami
 }
 
 // sleep — delay for a specified amount of time
-func builtinSleep(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinSleep(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`sleep — delay for a specified amount of time
@@ -139,21 +139,21 @@ func parseDuration(s string) (time.Duration, error) {
 }
 
 // true — return success exit status
-func builtinTrue(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinTrue(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		return io.NopCloser(strings.NewReader("")), nil
 	}
 }
 
 // false — return failure exit status
-func builtinFalse(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinFalse(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("false")
 	}
 }
 
 // whereis — locate the binary, source, and manual page files for a command
-func builtinWhereis(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinWhereis(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`whereis — locate command files
@@ -183,7 +183,7 @@ Usage: whereis COMMAND...
 	}
 }
 
-func findCommand(v *shellfish.VirtualOS, cmd string, ctx context.Context) string {
+func findCommand(v *grasp.VirtualOS, cmd string, ctx context.Context) string {
 	searchPaths := []string{"/bin", "/usr/bin", "/usr/local/bin"}
 
 	for _, dir := range searchPaths {

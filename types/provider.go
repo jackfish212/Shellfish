@@ -1,4 +1,4 @@
-// Package types defines the core interfaces and types for shellfish (Agent File System).
+// Package types defines the core interfaces and types for grasp (Agent File System).
 // This package is intentionally kept minimal with no external dependencies.
 package types
 
@@ -17,7 +17,7 @@ import (
 //   - Executable  — Execute tools / commands
 //   - Searchable  — Full-text or semantic search
 //
-// shellfish detects these capabilities at runtime via type assertion, so providers
+// grasp detects these capabilities at runtime via type assertion, so providers
 // only implement what they actually support.
 type Provider interface {
 	Stat(ctx context.Context, path string) (*Entry, error)

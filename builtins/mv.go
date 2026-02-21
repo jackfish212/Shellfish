@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinMv(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinMv(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("mv — move (rename) files\nUsage: mv <source> <dest>\n")), nil
@@ -18,7 +18,7 @@ func builtinMv(v *shellfish.VirtualOS) mounts.ExecFunc {
 		if len(args) < 2 {
 			return nil, fmt.Errorf("mv: missing operand")
 		}
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}

@@ -1,4 +1,4 @@
-package shellfish
+package grasp
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackfish212/shellfish/mounts"
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/mounts"
+	"github.com/jackfish212/grasp/types"
 )
 
 const defaultPath = "/usr/bin:/sbin"
@@ -56,21 +56,21 @@ func MountRootFS(v *VirtualOS) (*mounts.MemFS, error) {
 // Configure sets up a VirtualOS with standard filesystem structure,
 // /proc, and all built-in commands. Returns the root MemFS for further customization.
 func Configure(v *VirtualOS) (*mounts.MemFS, error) {
-	slog.Debug("shellfish: starting configuration")
+	slog.Debug("grasp: starting configuration")
 	rootFS, err := MountRootFS(v)
 	if err != nil {
-		slog.Error("shellfish: failed to mount root filesystem", "error", err)
+		slog.Error("grasp: failed to mount root filesystem", "error", err)
 		return nil, err
 	}
-	slog.Info("shellfish: root filesystem mounted")
+	slog.Info("grasp: root filesystem mounted")
 
 	if err := MountProc(v); err != nil {
-		slog.Error("shellfish: failed to mount /proc", "error", err)
+		slog.Error("grasp: failed to mount /proc", "error", err)
 		return nil, err
 	}
-	slog.Info("shellfish: /proc mounted")
+	slog.Info("grasp: /proc mounted")
 
-	slog.Debug("shellfish: configuration complete")
+	slog.Debug("grasp: configuration complete")
 	return rootFS, nil
 }
 

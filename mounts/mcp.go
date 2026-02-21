@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 // MCPClient abstracts the Model Context Protocol client.

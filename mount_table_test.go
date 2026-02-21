@@ -1,11 +1,11 @@
-package shellfish
+package grasp
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 type stubProvider struct{}

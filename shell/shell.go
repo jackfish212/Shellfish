@@ -18,7 +18,7 @@ type hereDocInfo struct {
 // cmdLine is the raw command string; result is the execution outcome.
 type ExecHook func(cmdLine string, result *ExecResult)
 
-// Shell provides a command-line interface to shellfish operations.
+// Shell provides a command-line interface to grasp operations.
 type Shell struct {
 	vos         VirtualOS
 	Env         *ShellEnv
@@ -293,7 +293,7 @@ func (s *Shell) absPath(p string) string {
 	return cleanPath(s.Env.Get("PWD") + "/" + p)
 }
 
-// cleanPath normalises an shellfish path: forward-slashes, no trailing slash,
+// cleanPath normalises an grasp path: forward-slashes, no trailing slash,
 // always starts with "/".
 func cleanPath(p string) string {
 	p = strings.ReplaceAll(p, "\\", "/")

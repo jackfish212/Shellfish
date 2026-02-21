@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/jackfish212/shellfish/mounts"
+	"github.com/jackfish212/grasp/mounts"
 )
 
 func builtinUname() mounts.ExecFunc {
@@ -27,7 +27,7 @@ Options:
 
 		info := unameInfo{
 			SysName:  "AgentFS",
-			NodeName: "shellfish",
+			NodeName: "grasp",
 			Release:  Version,
 			Version:  runtime.Version(),
 			Machine:  runtime.GOARCH,

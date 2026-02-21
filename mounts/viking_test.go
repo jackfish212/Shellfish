@@ -7,17 +7,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 // mockVikingClient implements VikingClient for testing without a real server.
 type mockVikingClient struct {
-	entries   map[string]*VikingEntry   // uri → entry
-	children  map[string][]VikingEntry  // uri → children
-	content   map[string]string         // uri → L2 content
-	abstracts map[string]string         // uri → L0 abstract
-	overviews map[string]string         // uri → L1 overview
-	resources map[string]map[string]any // uri → add_resource result
+	entries    map[string]*VikingEntry   // uri → entry
+	children   map[string][]VikingEntry  // uri → children
+	content    map[string]string         // uri → L2 content
+	abstracts  map[string]string         // uri → L0 abstract
+	overviews  map[string]string         // uri → L1 overview
+	resources  map[string]map[string]any // uri → add_resource result
 	searchHits []VikingSearchHit
 }
 
@@ -370,7 +370,7 @@ func TestVikingProvider_URIMapping(t *testing.T) {
 		path string
 		uri  string
 	}{
-		{"", "viking://"},  // root URI preserves trailing slash
+		{"", "viking://"}, // root URI preserves trailing slash
 		{"resources", "viking://resources"},
 		{"resources/project/docs", "viking://resources/project/docs"},
 	}

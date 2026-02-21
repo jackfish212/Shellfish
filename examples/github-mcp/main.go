@@ -2,7 +2,7 @@
 //
 // Demonstrates connecting to GitHub's official MCP Server
 // (https://github.com/github/github-mcp-server) using HttpMCPClient
-// and mounting its tools into a Shellfish VOS namespace.
+// and mounting its tools into a grasp VOS namespace.
 //
 // Run:
 //
@@ -30,9 +30,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 	"github.com/joho/godotenv"
 )
 
@@ -49,8 +49,8 @@ func main() {
 
 	ctx := context.Background()
 
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		log.Fatalf("Configure VOS: %v", err)
 	}
@@ -81,7 +81,7 @@ func main() {
 		log.Fatalf("Mount GitHub MCP: %v", err)
 	}
 
-	workFS := mounts.NewMemFS(shellfish.PermRW)
+	workFS := mounts.NewMemFS(grasp.PermRW)
 	if err := v.Mount("/workspace", workFS); err != nil {
 		log.Fatalf("Mount workspace: %v", err)
 	}
@@ -92,8 +92,12 @@ func main() {
 	} else {
 		fmt.Printf("\nGitHub MCP tools available: %d\n", len(tools))
 		shown := 5
-		if verbose { shown = len(tools) }
-		if shown > len(tools) { shown = len(tools) }
+		if verbose {
+			shown = len(tools)
+		}
+		if shown > len(tools) {
+			shown = len(tools)
+		}
 		for _, t := range tools[:shown] {
 			fmt.Printf("  %s - %s\n", t.Name, truncate(t.Description, 60))
 		}
@@ -107,7 +111,7 @@ func main() {
 
 	fmt.Println()
 	fmt.Println("========================================")
-	fmt.Println("  Shellfish + GitHub MCP Server (HTTP)")
+	fmt.Println("  grasp + GitHub MCP Server (HTTP)")
 	fmt.Println("========================================")
 	fmt.Println()
 
@@ -118,7 +122,7 @@ func main() {
 	}
 }
 
-func runInteractiveMode(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, tool anthropic.ToolParam) {
+func runInteractiveMode(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, tool anthropic.ToolParam) {
 	fmt.Println("Interactive Mode (type 'exit' to quit)")
 	fmt.Println()
 
@@ -142,9 +146,13 @@ Common GitHub tools:
 	for {
 		fmt.Print("You: ")
 		input, err := reader.ReadString('\n')
-		if err != nil { break }
+		if err != nil {
+			break
+		}
 		input = strings.TrimSpace(input)
-		if input == "" { continue }
+		if input == "" {
+			continue
+		}
 		if strings.ToLower(input) == "exit" || strings.ToLower(input) == "quit" {
 			fmt.Println("Goodbye!")
 			break
@@ -154,7 +162,7 @@ Common GitHub tools:
 	}
 }
 
-func runDemoMode(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, tool anthropic.ToolParam) {
+func runDemoMode(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, tool anthropic.ToolParam) {
 	fmt.Println("Demo Mode")
 	fmt.Println("=========")
 	fmt.Println()
@@ -189,7 +197,7 @@ Please complete these tasks:
 	fmt.Println("\n[Demo Complete]")
 }
 
-func agentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, tool anthropic.ToolParam, messages []anthropic.MessageParam, system string) []anthropic.MessageParam {
+func agentLoop(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, tool anthropic.ToolParam, messages []anthropic.MessageParam, system string) []anthropic.MessageParam {
 	sh := v.Shell("agent")
 	model := getModel()
 
@@ -245,7 +253,9 @@ func agentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Cli
 			}
 		}
 
-		if !hasToolUse { break }
+		if !hasToolUse {
+			break
+		}
 		messages = append(messages, anthropic.NewUserMessage(toolResults...))
 	}
 
@@ -255,7 +265,7 @@ func agentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Cli
 func shellToolDef() anthropic.ToolParam {
 	return anthropic.ToolParam{
 		Name:        "shell",
-		Description: anthropic.String("Execute a command in the Shellfish virtual filesystem. GitHub MCP tools are at /github/tools/. Use ls to discover tools, then execute them with --param flags. Standard commands (cat, grep, echo, write) also available. Supports pipes (|) and redirects (>, >>)."),
+		Description: anthropic.String("Execute a command in the grasp virtual filesystem. GitHub MCP tools are at /github/tools/. Use ls to discover tools, then execute them with --param flags. Standard commands (cat, grep, echo, write) also available. Supports pipes (|) and redirects (>, >>)."),
 		InputSchema: anthropic.ToolInputSchemaParam{
 			Type: constant.ValueOf[constant.Object](),
 			Properties: map[string]interface{}{
@@ -289,6 +299,8 @@ func newAnthropicClient() anthropic.Client {
 }
 
 func truncate(s string, max int) string {
-	if len(s) <= max { return s }
+	if len(s) <= max {
+		return s
+	}
 	return s[:max] + "... (truncated)"
 }

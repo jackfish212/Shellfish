@@ -1,4 +1,4 @@
-package shellfish
+package grasp
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackfish212/shellfish/mounts"
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/mounts"
+	"github.com/jackfish212/grasp/types"
 )
 
 func setupVOS(t *testing.T) *VirtualOS {

@@ -1,12 +1,12 @@
-# Shellfish Documentation
+# GRASP Documentation
 
-Shellfish is a mount-based virtual userland for AI agents. It provides a unified namespace where files, tools, APIs, and knowledge bases are all accessed through standard filesystem operations and a built-in shell.
+GRASP (**G**eneral **R**untime for **A**gent **S**hell **P**rimitives) is a mount-based virtual userland for AI agents. It provides a unified namespace where files, tools, APIs, and knowledge bases are all accessed through standard filesystem operations and a built-in shell.
 
-## Explanation — Understanding Shellfish
+## Explanation — Understanding GRASP
 
-Conceptual discussions about why Shellfish exists and how it works.
+Conceptual discussions about why GRASP exists and how it works.
 
-- [Why Shellfish](explanation/why-shellfish.md) — The problem Shellfish solves and where it fits in the agent ecosystem
+- [Why GRASP](explanation/why-grasp.md) — The problem GRASP solves, naming rationale, and where it fits in the agent ecosystem
 - [Architecture](explanation/architecture.md) — Core design: VirtualOS, MountTable, Shell
 - [Provider Model](explanation/provider-model.md) — Capability-based interfaces and runtime detection
 - [Shell as Universal Interface](explanation/shell-as-interface.md) — Why shell commands beat tool APIs for agents
@@ -16,7 +16,7 @@ Conceptual discussions about why Shellfish exists and how it works.
 
 Step-by-step learning for newcomers.
 
-- [Getting Started](tutorials/getting-started.md) — Set up Shellfish, mount providers, run shell commands
+- [Getting Started](tutorials/getting-started.md) — Set up GRASP, mount providers, run shell commands
 
 ## How-to Guides — Solving Specific Problems
 

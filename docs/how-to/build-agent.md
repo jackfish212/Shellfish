@@ -1,6 +1,6 @@
 # Build an Agent with Shell Routing
 
-This guide shows how to build an AI agent that integrates Shellfish with an LLM backend. The agent routes commands starting with `!` directly to the shell, and handles other input through the LLM.
+This guide shows how to build an AI agent that integrates GRASP with an LLM backend. The agent routes commands starting with `!` directly to the shell, and handles other input through the LLM.
 
 ## Architecture Overview
 
@@ -25,23 +25,23 @@ import (
     "os"
     "strings"
 
-    "github.com/jackfish212/shellfish"
-    "github.com/jackfish212/shellfish/builtins"
-    "github.com/jackfish212/shellfish/mounts"
+    "github.com/jackfish212/grasp"
+    "github.com/jackfish212/grasp/builtins"
+    "github.com/jackfish212/grasp/mounts"
 )
 
 func main() {
     // Create and configure VirtualOS
-    v := shellfish.New()
-    rootFS, err := shellfish.Configure(v)
+    v := grasp.New()
+    rootFS, err := grasp.Configure(v)
     if err != nil {
         panic(err)
     }
     builtins.RegisterBuiltinsOnFS(v, rootFS)
 
     // Mount data sources
-    v.Mount("/data", mounts.NewLocalFS(".", shellfish.PermRW))
-    v.Mount("/memory", mounts.NewMemFS(shellfish.PermRW))
+    v.Mount("/data", mounts.NewLocalFS(".", grasp.PermRW))
+    v.Mount("/memory", mounts.NewMemFS(grasp.PermRW))
 
     // Create shell
     sh := v.Shell("agent")
@@ -55,7 +55,7 @@ func main() {
 ### Step 2: Route Commands
 
 ```go
-func runAgentLoop(ctx context.Context, sh *shellfish.Shell) {
+func runAgentLoop(ctx context.Context, sh *grasp.Shell) {
     reader := bufio.NewReader(os.Stdin)
 
     for {
@@ -86,7 +86,7 @@ func runAgentLoop(ctx context.Context, sh *shellfish.Shell) {
 ### Step 3: Define Shell Tool for LLM
 
 ```go
-func callLLM(ctx context.Context, sh *shellfish.Shell, userMessage string) string {
+func callLLM(ctx context.Context, sh *grasp.Shell, userMessage string) string {
     // Define the shell tool
     shellTool := anthropic.ToolParam{
         Name:        anthropic.F("shell"),
@@ -122,7 +122,7 @@ func callLLM(ctx context.Context, sh *shellfish.Shell, userMessage string) strin
     }
 }
 
-func handleToolCall(ctx context.Context, sh *shellfish.Shell, block anthropic.ContentBlock) string {
+func handleToolCall(ctx context.Context, sh *grasp.Shell, block anthropic.ContentBlock) string {
     var input struct {
         Command string `json:"command"`
     }
@@ -148,25 +148,25 @@ import (
     "strings"
 
     "github.com/anthropics/anthropic-sdk-go"
-    "github.com/jackfish212/shellfish"
-    "github.com/jackfish212/shellfish/builtins"
-    "github.com/jackfish212/shellfish/mounts"
+    "github.com/jackfish212/grasp"
+    "github.com/jackfish212/grasp/builtins"
+    "github.com/jackfish212/grasp/mounts"
 )
 
 type Agent struct {
     client *anthropic.Client
-    shell  *shellfish.Shell
+    shell  *grasp.Shell
 }
 
 func main() {
     // Setup VirtualOS
-    v := shellfish.New()
-    rootFS, _ := shellfish.Configure(v)
+    v := grasp.New()
+    rootFS, _ := grasp.Configure(v)
     builtins.RegisterBuiltinsOnFS(v, rootFS)
 
     // Mount providers
-    v.Mount("/data", mounts.NewLocalFS(".", shellfish.PermRW))
-    v.Mount("/memory", mounts.NewMemFS(shellfish.PermRW))
+    v.Mount("/data", mounts.NewLocalFS(".", grasp.PermRW))
+    v.Mount("/memory", mounts.NewMemFS(grasp.PermRW))
 
     // Optional: Mount GitHub
     if token := os.Getenv("GITHUB_TOKEN"); token != "" {
@@ -186,7 +186,7 @@ func (a *Agent) Run(ctx context.Context) {
     reader := bufio.NewReader(os.Stdin)
     var messages []anthropic.MessageParam
 
-    fmt.Println("Shellfish Agent - Type !<cmd> for shell, otherwise chat with AI")
+    fmt.Println("GRASP Agent - Type !<cmd> for shell, otherwise chat with AI")
     fmt.Println()
 
     for {
@@ -369,16 +369,16 @@ func (a *Agent) executeTool(ctx context.Context, block anthropic.ContentBlock) a
 For a comprehensive setup with all available providers:
 
 ```go
-func setupAllProviders(v *shellfish.VirtualOS) {
+func setupAllProviders(v *grasp.VirtualOS) {
     // Local filesystem
-    v.Mount("/data", mounts.NewLocalFS(".", shellfish.PermRW))
+    v.Mount("/data", mounts.NewLocalFS(".", grasp.PermRW))
 
     // In-memory workspace
-    memFS := mounts.NewMemFS(shellfish.PermRW)
+    memFS := mounts.NewMemFS(grasp.PermRW)
     v.Mount("/memory", memFS)
 
     // SQLite persistence
-    sqliteFS, _ := mounts.NewSQLiteFS("agent.db", shellfish.PermRW)
+    sqliteFS, _ := mounts.NewSQLiteFS("agent.db", grasp.PermRW)
     v.Mount("/persist", sqliteFS)
 
     // GitHub API
@@ -388,10 +388,10 @@ func setupAllProviders(v *shellfish.VirtualOS) {
         ))
     }
 
-    // HTTP endpoints
-    httpFS := mounts.NewHTTPFS(shellfish.PermRO)
-    httpFS.Add("news", "https://feeds.example.com/rss", &mounts.RSSParser{})
-    v.Mount("/http", httpFS)
+    // HTTP endpoints (requires separate package: github.com/jackfish212/httpfs)
+    // httpFS := httpfs.NewHTTPFS()
+    // httpFS.Add("news", "https://feeds.example.com/rss", &httpfs.RSSParser{})
+    // v.Mount("/http", httpFS)
 
     // MCP servers
     if mcpCmd := os.Getenv("MCP_FILESYSTEM_CMD"); mcpCmd != "" {

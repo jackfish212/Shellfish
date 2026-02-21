@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 func (s *Shell) loadProfileEnv() {

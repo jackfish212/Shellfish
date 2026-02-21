@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 // mockVirtualOS implements VirtualOS for testing
@@ -27,8 +27,8 @@ type mockFile struct {
 
 func newMockVirtualOS() *mockVirtualOS {
 	return &mockVirtualOS{
-		files:    make(map[string]*mockFile),
-		dirs:     make(map[string]bool),
+		files: make(map[string]*mockFile),
+		dirs:  make(map[string]bool),
 		execFile: make(map[string]struct {
 			fn    func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error)
 			perms types.Perm
@@ -163,7 +163,7 @@ func setupTestShell(t *testing.T) (*Shell, *mockVirtualOS) {
 				if f, ok := v.files[cleanPath(args[0])]; ok {
 					return io.NopCloser(bytes.NewReader(f.content)), nil
 				}
-				return io.NopCloser(strings.NewReader("cat: "+args[0]+": No such file\n")), nil
+				return io.NopCloser(strings.NewReader("cat: " + args[0] + ": No such file\n")), nil
 			}
 			if stdin != nil {
 				data, _ := io.ReadAll(stdin)
@@ -486,11 +486,11 @@ func TestAbsPath(t *testing.T) {
 
 func TestParseHereDoc(t *testing.T) {
 	tests := []struct {
-		name         string
-		input        string
-		wantNil      bool
-		wantDelim    string
-		wantCmd      string
+		name      string
+		input     string
+		wantNil   bool
+		wantDelim string
+		wantCmd   string
 	}{
 		{
 			name:      "simple heredoc",
@@ -558,10 +558,10 @@ func TestExtractHereDocContent(t *testing.T) {
 			wantContent: "line1\nline2",
 		},
 		{
-			name:        "with remaining",
-			fullLine:    "cat << EOF\ncontent\nEOF\necho next",
-			delim:       "EOF",
-			wantContent: "content",
+			name:          "with remaining",
+			fullLine:      "cat << EOF\ncontent\nEOF\necho next",
+			delim:         "EOF",
+			wantContent:   "content",
 			wantRemaining: "echo next",
 		},
 		{

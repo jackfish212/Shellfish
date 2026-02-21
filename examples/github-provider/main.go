@@ -1,7 +1,7 @@
 // Example: GitHub Provider - Mount GitHub API as a Filesystem
 //
 // This example demonstrates how to create a custom Provider that exposes
-// GitHub's REST API as a virtual filesystem. It showcases Shellfish's
+// GitHub's REST API as a virtual filesystem. It showcases grasp's
 // "Mount Anything" philosophy.
 //
 // Run: go run ./examples/github-provider
@@ -40,9 +40,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 	"github.com/joho/godotenv"
 )
 
@@ -57,9 +57,9 @@ func main() {
 		log.Printf("Note: No .env file found, using environment variables")
 	}
 
-	// Initialize Shellfish VirtualOS
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	// Initialize grasp VirtualOS
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		panic(err)
 	}
@@ -132,7 +132,7 @@ func main() {
 	}
 }
 
-func runInteractiveMode(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
+func runInteractiveMode(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
 	fmt.Println("Interactive Mode")
 	fmt.Println("=============== ")
 	fmt.Println("Ask questions about GitHub repositories.")
@@ -172,7 +172,7 @@ Be helpful and answer questions about code, documentation, issues, and project s
 	}
 }
 
-func runDefaultTask(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, defaultRepo string) {
+func runDefaultTask(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, defaultRepo string) {
 	// Use a popular open-source project as example
 	exampleRepo := "golang/go"
 	if defaultRepo != "" {
@@ -201,7 +201,7 @@ Use shell commands to explore the filesystem mounted at /github.`, exampleRepo)
 	fmt.Println("\n[Done]")
 }
 
-func processAgentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
+func processAgentLoop(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
 	for {
 		resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 			Model:     anthropic.ModelClaudeSonnet4_5_20250929,
@@ -258,7 +258,7 @@ func processAgentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthro
 	return messages
 }
 
-func executeShell(v *shellfish.VirtualOS, command string) string {
+func executeShell(v *grasp.VirtualOS, command string) string {
 	sh := v.Shell("agent")
 	result := sh.Execute(context.Background(), command)
 

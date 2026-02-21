@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinRmdir(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinRmdir(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`rmdir — remove empty directories
@@ -44,7 +44,7 @@ Options:
 			return nil, fmt.Errorf("rmdir: missing operand")
 		}
 
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -80,7 +80,7 @@ Options:
 }
 
 // removeEmptyDir removes a single empty directory
-func removeEmptyDir(ctx context.Context, v *shellfish.VirtualOS, target string, out *strings.Builder, verbose bool) error {
+func removeEmptyDir(ctx context.Context, v *grasp.VirtualOS, target string, out *strings.Builder, verbose bool) error {
 	// Check if it's a directory
 	entry, err := v.Stat(ctx, target)
 	if err != nil {
@@ -92,7 +92,7 @@ func removeEmptyDir(ctx context.Context, v *shellfish.VirtualOS, target string, 
 	}
 
 	// Check if directory is empty
-	entries, err := v.List(ctx, target, shellfish.ListOpts{})
+	entries, err := v.List(ctx, target, grasp.ListOpts{})
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func removeEmptyDir(ctx context.Context, v *shellfish.VirtualOS, target string, 
 }
 
 // removeParents removes the directory and its empty parent directories
-func removeParents(ctx context.Context, v *shellfish.VirtualOS, target string, ignoreNonEmpty bool, verbose bool, out *strings.Builder) bool {
+func removeParents(ctx context.Context, v *grasp.VirtualOS, target string, ignoreNonEmpty bool, verbose bool, out *strings.Builder) bool {
 	hasError := false
 	current := target
 
@@ -138,7 +138,7 @@ func removeParents(ctx context.Context, v *shellfish.VirtualOS, target string, i
 		}
 
 		// Move to parent directory
-		parent := shellfish.CleanPath(current + "/..")
+		parent := grasp.CleanPath(current + "/..")
 		if parent == current {
 			break
 		}

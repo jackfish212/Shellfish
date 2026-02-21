@@ -7,24 +7,24 @@ import (
 	"strings"
 	"testing"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 )
 
 func setupTestServer(t *testing.T) *Server {
 	t.Helper()
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
 	builtins.RegisterBuiltinsOnFS(v, rootFS)
 
-	mem := mounts.NewMemFS(shellfish.PermRW)
-	mem.AddFile("hello.txt", []byte("Hello, Shellfish!\n"), shellfish.PermRW)
+	mem := mounts.NewMemFS(grasp.PermRW)
+	mem.AddFile("hello.txt", []byte("Hello, grasp!\n"), grasp.PermRW)
 	mem.AddDir("subdir")
-	mem.AddFile("subdir/nested.txt", []byte("nested content\n"), shellfish.PermRW)
+	mem.AddFile("subdir/nested.txt", []byte("nested content\n"), grasp.PermRW)
 	if err := v.Mount("/data", mem); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
@@ -87,8 +87,8 @@ func TestInitialize(t *testing.T) {
 	if result.ProtocolVersion != protocolVersion {
 		t.Errorf("protocolVersion = %q, want %q", result.ProtocolVersion, protocolVersion)
 	}
-	if result.ServerInfo.Name != "shellfish" {
-		t.Errorf("serverInfo.name = %q, want %q", result.ServerInfo.Name, "shellfish")
+	if result.ServerInfo.Name != "grasp" {
+		t.Errorf("serverInfo.name = %q, want %q", result.ServerInfo.Name, "grasp")
 	}
 	if result.Capabilities.Tools == nil {
 		t.Error("capabilities.tools should not be nil")
@@ -165,8 +165,8 @@ func TestToolsCallCat(t *testing.T) {
 	var result toolsCallResult
 	json.Unmarshal(b, &result)
 
-	if result.Content[0].Text != "Hello, Shellfish!\n" {
-		t.Errorf("cat output = %q, want %q", result.Content[0].Text, "Hello, Shellfish!\n")
+	if result.Content[0].Text != "Hello, grasp!\n" {
+		t.Errorf("cat output = %q, want %q", result.Content[0].Text, "Hello, grasp!\n")
 	}
 }
 

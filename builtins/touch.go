@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinTouch(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinTouch(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("touch — update file timestamps or create empty files\nUsage: touch <file>...\n")), nil
@@ -18,7 +18,7 @@ func builtinTouch(v *shellfish.VirtualOS) mounts.ExecFunc {
 		if len(args) == 0 {
 			return nil, fmt.Errorf("touch: missing operand")
 		}
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}

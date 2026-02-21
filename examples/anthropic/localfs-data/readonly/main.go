@@ -1,4 +1,4 @@
-// Example: Using Shellfish with Anthropic SDK
+// Example: Using grasp with Anthropic SDK
 //
 // This example demonstrates how to give Claude a shell interface
 // through the Anthropic Go SDK. Claude can execute shell commands
@@ -25,9 +25,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 	"github.com/joho/godotenv"
 )
 
@@ -42,22 +42,22 @@ func main() {
 		log.Printf("Warning: Could not load .env file: %v", err)
 		log.Println("Using environment variables instead.")
 	}
-	// Initialize Shellfish VirtualOS
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	// Initialize grasp VirtualOS
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		panic(err)
 	}
 	builtins.RegisterBuiltinsOnFS(v, rootFS)
 
 	// Mount an in-memory filesystem for the project
-	memFS := mounts.NewMemFS(shellfish.PermRW)
+	memFS := mounts.NewMemFS(grasp.PermRW)
 	if err := v.Mount("/project", memFS); err != nil {
 		panic(fmt.Errorf("failed to mount /project: %w", err))
 	}
 
 	// Mount a local filesystem for persistent data storage
-	localFS := mounts.NewLocalFS(filepath.Join(".", "localfs-data"), shellfish.PermRW)
+	localFS := mounts.NewLocalFS(filepath.Join(".", "localfs-data"), grasp.PermRW)
 	if err := v.Mount("/data", localFS); err != nil {
 		panic(fmt.Errorf("failed to mount /data: %w", err))
 	}
@@ -101,7 +101,7 @@ func main() {
 	ctx := context.Background()
 
 	// Start conversation
-	fmt.Println("Shellfish + Anthropic SDK Example")
+	fmt.Println("grasp + Anthropic SDK Example")
 	fmt.Println("=================================")
 	fmt.Println("Filesystems mounted:")
 	fmt.Println("  /project - in-memory filesystem (memfs)")
@@ -115,7 +115,7 @@ func main() {
 	}
 }
 
-func runInteractiveMode(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
+func runInteractiveMode(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
 	fmt.Println("Interactive Mode")
 	fmt.Println("=============== ")
 	fmt.Println("Type your message and press Enter to chat with the agent.")
@@ -153,7 +153,7 @@ func runInteractiveMode(ctx context.Context, v *shellfish.VirtualOS, client anth
 	}
 }
 
-func runDefaultTask(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
+func runDefaultTask(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam) {
 	// Default task: cross-filesystem task between memfs (/project) and localfs (/data)
 	task := `You have access to TWO filesystems:
 - /project (in-memory filesystem) - contains source code
@@ -200,7 +200,7 @@ Use shell commands to work across both filesystems. The /data filesystem persist
 	fmt.Println(result)
 }
 
-func processAgentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
+func processAgentLoop(ctx context.Context, v *grasp.VirtualOS, client anthropic.Client, shellTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
 	for {
 		resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
 			Model:     anthropic.ModelClaudeSonnet4_5_20250929,
@@ -260,7 +260,7 @@ func processAgentLoop(ctx context.Context, v *shellfish.VirtualOS, client anthro
 	return messages
 }
 
-func setupVirtualProject(v *shellfish.VirtualOS) {
+func setupVirtualProject(v *grasp.VirtualOS) {
 	ctx := context.Background()
 
 	// Create README.md
@@ -485,7 +485,7 @@ require (
 	v.Write(ctx, "/project/config.json", strings.NewReader(config))
 }
 
-func executeShell(v *shellfish.VirtualOS, command string) string {
+func executeShell(v *grasp.VirtualOS, command string) string {
 	sh := v.Shell("agent")
 	result := sh.Execute(context.Background(), command)
 

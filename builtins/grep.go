@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
+	grasp "github.com/jackfish212/grasp"
 )
 
 type grepOpts struct {
@@ -26,12 +26,12 @@ type grepOpts struct {
 }
 
 type lineInfo struct {
-	num    int
-	text   string
+	num     int
+	text    string
 	matched bool
 }
 
-func builtinGrep(v *shellfish.VirtualOS) func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
+func builtinGrep(v *grasp.VirtualOS) func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		opts := grepOpts{}
 		pattern, files, err := parseGrepArgs(args, &opts)
@@ -69,7 +69,7 @@ func builtinGrep(v *shellfish.VirtualOS) func(ctx context.Context, args []string
 		}
 
 		// Get current working directory
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -310,7 +310,7 @@ func writeLine(result *strings.Builder, filename string, lineNum int, line strin
 	}
 }
 
-func grepPath(v *shellfish.VirtualOS, path, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context, beforeCtx, afterCtx int) (int, error) {
+func grepPath(v *grasp.VirtualOS, path, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context, beforeCtx, afterCtx int) (int, error) {
 	entry, err := v.Stat(ctx, path)
 	if err != nil {
 		return 0, fmt.Errorf("grep: %s: %w", displayPath, err)
@@ -336,8 +336,8 @@ func grepPath(v *shellfish.VirtualOS, path, displayPath string, re *regexp.Regex
 	return count, nil
 }
 
-func grepDir(v *shellfish.VirtualOS, dirPath, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context, beforeCtx, afterCtx int) (int, error) {
-	entries, err := v.List(ctx, dirPath, shellfish.ListOpts{})
+func grepDir(v *grasp.VirtualOS, dirPath, displayPath string, re *regexp.Regexp, opts *grepOpts, result *strings.Builder, ctx context.Context, beforeCtx, afterCtx int) (int, error) {
+	entries, err := v.List(ctx, dirPath, grasp.ListOpts{})
 	if err != nil {
 		return 0, fmt.Errorf("grep: %s: %w", displayPath, err)
 	}
@@ -364,7 +364,7 @@ func hasWildcard(s string) bool {
 }
 
 // expandWildcards expands wildcard patterns in file arguments
-func expandWildcards(v *shellfish.VirtualOS, ctx context.Context, cwd string, files []string) ([]string, error) {
+func expandWildcards(v *grasp.VirtualOS, ctx context.Context, cwd string, files []string) ([]string, error) {
 	if len(files) == 0 {
 		return files, nil
 	}
@@ -389,7 +389,7 @@ func expandWildcards(v *shellfish.VirtualOS, ctx context.Context, cwd string, fi
 		}
 
 		// List directory and match against pattern
-		entries, err := v.List(ctx, dir, shellfish.ListOpts{})
+		entries, err := v.List(ctx, dir, grasp.ListOpts{})
 		if err != nil {
 			// If we can't list the directory, keep the original path
 			expanded = append(expanded, f)

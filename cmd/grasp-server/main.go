@@ -1,8 +1,8 @@
-// shellfish-server exposes a Shellfish VirtualOS as an MCP server over stdio.
+// grasp-server exposes a grasp VirtualOS as an MCP server over stdio.
 //
 // Usage:
 //
-//	shellfish-server [flags]
+//	grasp-server [flags]
 //
 // Flags:
 //
@@ -17,7 +17,7 @@
 //
 // Example:
 //
-//	shellfish-server --mount /data:./workspace --mount /memory:sqlite:memory.db
+//	grasp-server --mount /data:./workspace --mount /memory:sqlite:memory.db
 package main
 
 import (
@@ -29,10 +29,10 @@ import (
 	"os/signal"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mcpserver"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mcpserver"
+	"github.com/jackfish212/grasp/mounts"
 )
 
 // mountFlags collects repeatable --mount flags.
@@ -53,8 +53,8 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		info := shellfish.GetVersionInfo()
-		fmt.Fprintf(os.Stdout, "shellfish-server %s (%s, %s)\n", info.Version, info.GoVersion, info.Platform)
+		info := grasp.GetVersionInfo()
+		fmt.Fprintf(os.Stdout, "grasp-server %s (%s, %s)\n", info.Version, info.GoVersion, info.Platform)
 		os.Exit(0)
 	}
 
@@ -64,8 +64,8 @@ func main() {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
 
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		slog.Error("failed to configure VirtualOS", "error", err)
 		os.Exit(1)
@@ -97,7 +97,7 @@ func main() {
 //	memfs            → in-memory MemFS
 //	sqlite:file.db   → SQLiteFS backed by file.db
 //	./dir or /abs    → LocalFS pointing at a host directory
-func mountFromSpec(v *shellfish.VirtualOS, spec string) error {
+func mountFromSpec(v *grasp.VirtualOS, spec string) error {
 	idx := strings.Index(spec, ":")
 	if idx < 1 {
 		return fmt.Errorf("invalid mount spec %q (expected PATH:SOURCE)", spec)
@@ -112,17 +112,17 @@ func mountFromSpec(v *shellfish.VirtualOS, spec string) error {
 
 	switch {
 	case source == "memfs":
-		return v.Mount(mountPath, mounts.NewMemFS(shellfish.PermRW))
+		return v.Mount(mountPath, mounts.NewMemFS(grasp.PermRW))
 
 	case strings.HasPrefix(source, "sqlite:"):
 		dbPath := strings.TrimPrefix(source, "sqlite:")
-		fs, err := mounts.NewSQLiteFS(dbPath, shellfish.PermRW)
+		fs, err := mounts.NewSQLiteFS(dbPath, grasp.PermRW)
 		if err != nil {
 			return fmt.Errorf("SQLiteFS %q: %w", dbPath, err)
 		}
 		return v.Mount(mountPath, fs)
 
 	default:
-		return v.Mount(mountPath, mounts.NewLocalFS(source, shellfish.PermRW))
+		return v.Mount(mountPath, mounts.NewLocalFS(source, grasp.PermRW))
 	}
 }

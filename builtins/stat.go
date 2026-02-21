@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinStat(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinStat(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, _ io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("stat — show entry metadata\nUsage: stat <path>\n")), nil
@@ -18,7 +18,7 @@ func builtinStat(v *shellfish.VirtualOS) mounts.ExecFunc {
 		if len(args) == 0 {
 			return nil, fmt.Errorf("stat: missing path")
 		}
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}

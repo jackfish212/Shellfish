@@ -1,8 +1,8 @@
 # Built-in Providers
 
-Package: `github.com/jackfish212/shellfish/mounts`
+Package: `github.com/jackfish212/grasp/mounts`
 
-Shellfish ships with a comprehensive set of providers for common use cases. Each provider implements a subset of the capability interfaces (Provider, Readable, Writable, Executable, Searchable, Mutable).
+GRASP ships with a comprehensive set of providers for common use cases. Each provider implements a subset of the capability interfaces (Provider, Readable, Writable, Executable, Searchable, Mutable).
 
 ## Provider Summary
 
@@ -26,10 +26,10 @@ Shellfish ships with a comprehensive set of providers for common use cases. Each
 The Swiss Army knife provider. Stores files and directories in memory. Supports registering Go functions as executable entries.
 
 ```go
-fs := mounts.NewMemFS(shellfish.PermRW)
+fs := mounts.NewMemFS(grasp.PermRW)
 
 // Add files
-fs.AddFile("config.yaml", []byte("key: value"), shellfish.PermRO)
+fs.AddFile("config.yaml", []byte("key: value"), grasp.PermRO)
 fs.AddDir("data")
 
 // Add executable functions
@@ -56,10 +56,10 @@ fs.AddExecFunc("hello", func(ctx context.Context, args []string, stdin io.Reader
 
 **Interfaces:** Provider, Readable, Writable, Searchable, Mutable
 
-Maps a host directory into Shellfish. File operations delegate directly to the OS.
+Maps a host directory into GRASP. File operations delegate directly to the OS.
 
 ```go
-fs := mounts.NewLocalFS("/home/user/projects", shellfish.PermRW)
+fs := mounts.NewLocalFS("/home/user/projects", grasp.PermRW)
 v.Mount("/projects", fs)
 
 // Now: cat /projects/readme.md → reads /home/user/projects/readme.md
@@ -79,7 +79,7 @@ v.Mount("/projects", fs)
 Stores files and metadata in a SQLite database. Data persists across process restarts.
 
 ```go
-fs, err := mounts.NewSQLiteFS("/var/data/agent.db", shellfish.PermRW)
+fs, err := mounts.NewSQLiteFS("/var/data/agent.db", grasp.PermRW)
 if err != nil {
     panic(err)
 }
@@ -141,17 +141,21 @@ sh.Execute(ctx, "cat /github/repos/myorg/myrepo/issues/42")
 
 ## HTTPFS — HTTP Endpoints as Filesystem
 
+> **Note:** HTTPFS has been moved to a separate package: `github.com/jackfish212/httpfs`
+
 **Interfaces:** Provider, Readable
 
 Maps HTTP endpoints to a virtual filesystem with automatic response parsing. Each configured source becomes a directory containing parsed content files.
 
 ```go
-fs := mounts.NewHTTPFS(shellfish.PermRO)
+import "github.com/jackfish212/httpfs"
+
+fs := httpfs.NewHTTPFS()
 
 // Add sources with parsers
-fs.Add("news", "https://example.com/feed.xml", &mounts.RSSParser{})
-fs.Add("api", "https://api.example.com/data", &mounts.JSONParser{})
-fs.Add("raw", "https://example.com/readme.txt", &mounts.RawParser{})
+fs.Add("news", "https://example.com/feed.xml", &httpfs.RSSParser{})
+fs.Add("api", "https://api.example.com/data", &httpfs.JSONParser{})
+fs.Add("raw", "https://example.com/readme.txt", &httpfs.RawParser{})
 
 v.Mount("/http", fs)
 
@@ -185,7 +189,7 @@ ls /http/newsource
 
 ## MCP Providers — Model Context Protocol
 
-Shellfish integrates with the [MCP ecosystem](https://modelcontextprotocol.io) through two provider types:
+GRASP integrates with the [MCP ecosystem](https://modelcontextprotocol.io) through two provider types:
 
 ### MCPToolProvider
 

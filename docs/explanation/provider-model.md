@@ -1,6 +1,6 @@
 # Provider Model
 
-The Provider model is Shellfish's core extensibility mechanism. It defines how external data sources, tools, and services plug into the virtual filesystem.
+The Provider model is GRASP's core extensibility mechanism. It defines how external data sources, tools, and services plug into the virtual filesystem.
 
 ## Design Philosophy
 
@@ -10,7 +10,7 @@ Most plugin systems use one of two approaches:
 
 2. **Registration-based.** Plugins register themselves for specific operations via a registry. This creates coupling to the registry and makes capability discovery opaque.
 
-Shellfish uses a third approach: **interface composition with runtime detection.**
+GRASP uses a third approach: **interface composition with runtime detection.**
 
 The base `Provider` interface is minimal — just `Stat` and `List`. Additional capabilities are separate interfaces that a provider *may* implement:
 
@@ -43,7 +43,7 @@ type Mutable interface {
 }
 ```
 
-Shellfish detects capabilities at runtime via Go type assertions:
+GRASP detects capabilities at runtime via Go type assertions:
 
 ```go
 if w, ok := provider.(Writable); ok {
@@ -58,7 +58,7 @@ This design produces three important properties:
 
 ### 1. Providers only implement what they support
 
-A read-only knowledge base implements `Provider` + `Readable` + `Searchable`. It doesn't need to stub out `Write` or `Mkdir`. The type system prevents accidental writes at compile time, and Shellfish prevents them at runtime.
+A read-only knowledge base implements `Provider` + `Readable` + `Searchable`. It doesn't need to stub out `Write` or `Mkdir`. The type system prevents accidental writes at compile time, and GRASP prevents them at runtime.
 
 ```go
 // A knowledge base — only navigation, reading, and search
@@ -72,7 +72,7 @@ func (kb *KnowledgeBase) Search(ctx context.Context, query string, opts SearchOp
 
 ### 2. New capabilities don't break existing providers
 
-If Shellfish adds a `Streamable` interface tomorrow, existing providers continue to work unchanged. Only providers that want streaming implement it. No version migration needed.
+If GRASP adds a `Streamable` interface tomorrow, existing providers continue to work unchanged. Only providers that want streaming implement it. No version migration needed.
 
 ### 3. Capability is self-documenting
 
@@ -90,7 +90,7 @@ Agents can reason about what operations are available without trial and error.
 
 ## Built-in Providers
 
-Shellfish ships with a comprehensive set of providers:
+GRASP ships with a comprehensive set of providers:
 
 ### MemFS — In-memory filesystem
 
@@ -99,8 +99,8 @@ Implements: `Provider`, `Readable`, `Writable`, `Executable`, `Mutable`
 The Swiss Army knife provider. Stores files and directories in memory. Supports registering Go functions as executable entries via `AddExecFunc()` — this is how builtins (`ls`, `cat`, `grep`, etc.) are implemented.
 
 ```go
-fs := mounts.NewMemFS(shellfish.PermRW)
-fs.AddFile("config.yaml", []byte("key: value"), shellfish.PermRO)
+fs := mounts.NewMemFS(grasp.PermRW)
+fs.AddFile("config.yaml", []byte("key: value"), grasp.PermRO)
 fs.AddExecFunc("hello", helloFunc, mounts.FuncMeta{
     Description: "Say hello",
     Usage:       "hello [name]",
@@ -111,10 +111,10 @@ fs.AddExecFunc("hello", helloFunc, mounts.FuncMeta{
 
 Implements: `Provider`, `Readable`, `Writable`, `Searchable`, `Mutable`
 
-Maps a host directory into Shellfish. File operations delegate to the OS. Search performs recursive text matching.
+Maps a host directory into GRASP. File operations delegate to the OS. Search performs recursive text matching.
 
 ```go
-fs := mounts.NewLocalFS("/home/user/projects", shellfish.PermRW)
+fs := mounts.NewLocalFS("/home/user/projects", grasp.PermRW)
 v.Mount("/projects", fs)
 // Now: cat /projects/readme.md → reads /home/user/projects/readme.md
 ```
@@ -126,7 +126,7 @@ Implements: `Provider`, `Readable`, `Writable`, `Mutable`
 Stores files and metadata in a SQLite database. Useful for persisting agent memory, session logs, or any data that should survive process restarts without depending on a specific directory structure.
 
 ```go
-fs, _ := mounts.NewSQLiteFS("/var/data/agent.db", shellfish.PermRW)
+fs, _ := mounts.NewSQLiteFS("/var/data/agent.db", grasp.PermRW)
 v.Mount("/memory", fs)
 ```
 
@@ -149,14 +149,18 @@ v.Mount("/github", fs)
 
 ### HTTPFS — HTTP endpoints as filesystem
 
+> **Note:** HTTPFS has been moved to a separate package: `github.com/jackfish212/httpfs`
+
 Implements: `Provider`, `Readable`
 
 Maps HTTP endpoints to virtual files with automatic response parsing. Supports RSS/Atom feeds, JSON APIs, and raw content.
 
 ```go
-fs := mounts.NewHTTPFS(shellfish.PermRO)
-fs.Add("news", "https://example.com/feed.xml", &mounts.RSSParser{})
-fs.Add("api", "https://api.example.com/data", &mounts.JSONParser{})
+import "github.com/jackfish212/httpfs"
+
+fs := httpfs.NewHTTPFS()
+fs.Add("news", "https://example.com/feed.xml", &httpfs.RSSParser{})
+fs.Add("api", "https://api.example.com/data", &httpfs.JSONParser{})
 v.Mount("/http", fs)
 // Now: ls /http/news → list feed items
 //      cat /http/news/item-1.txt → read specific item
@@ -201,7 +205,7 @@ v.Mount("/ctx", fs)
 
 ## The Entry Model
 
-Every item in Shellfish is described by an `Entry`:
+Every item in GRASP is described by an `Entry`:
 
 ```go
 type Entry struct {

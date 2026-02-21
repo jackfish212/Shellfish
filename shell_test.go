@@ -1,4 +1,4 @@
-package shellfish_test
+package grasp_test
 
 import (
 	"context"
@@ -6,24 +6,24 @@ import (
 	"strings"
 	"testing"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func setupShell(t *testing.T) (*shellfish.Shell, *shellfish.VirtualOS) {
+func setupShell(t *testing.T) (*grasp.Shell, *grasp.VirtualOS) {
 	t.Helper()
-	v := shellfish.New()
-	root := mounts.NewMemFS(shellfish.PermRW)
+	v := grasp.New()
+	root := mounts.NewMemFS(grasp.PermRW)
 	v.Mount("/", root)
 	root.AddDir("bin")
 	root.AddDir("usr")
 	root.AddDir("usr/bin")
 	root.AddDir("etc")
-	root.AddFile("etc/profile", []byte("export PATH=/usr/bin:/bin\n"), shellfish.PermRO)
+	root.AddFile("etc/profile", []byte("export PATH=/usr/bin:/bin\n"), grasp.PermRO)
 	root.AddDir("home")
 	root.AddDir("home/tester")
-	root.AddFile("home/tester/hello.txt", []byte("hello world"), shellfish.PermRW)
+	root.AddFile("home/tester/hello.txt", []byte("hello world"), grasp.PermRW)
 	root.AddDir("tmp")
 
 	builtins.RegisterBuiltinsOnFS(v, root)

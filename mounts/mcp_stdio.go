@@ -101,7 +101,7 @@ func (c *StdioMCPClient) Initialize(ctx context.Context) (map[string]any, error)
 		"protocolVersion": "2024-11-05",
 		"capabilities":    map[string]any{},
 		"clientInfo": map[string]any{
-			"name":    "shellfish-mcp-client",
+			"name":    "grasp-mcp-client",
 			"version": "1.0.0",
 		},
 	}

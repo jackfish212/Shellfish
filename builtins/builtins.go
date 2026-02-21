@@ -1,24 +1,24 @@
 package builtins
 
 import (
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-// RegisterBuiltins mounts standard shellfish utilities at the given path (e.g. "/bin").
-func RegisterBuiltins(v *shellfish.VirtualOS, mountPath string) error {
-	fs := mounts.NewMemFS(shellfish.PermRW)
+// RegisterBuiltins mounts standard grasp utilities at the given path (e.g. "/bin").
+func RegisterBuiltins(v *grasp.VirtualOS, mountPath string) error {
+	fs := mounts.NewMemFS(grasp.PermRW)
 	registerAllBuiltins(v, fs, "")
 	return v.Mount(mountPath, fs)
 }
 
-// RegisterBuiltinsOnFS registers standard shellfish utilities on the given MemFS at /usr/bin.
-func RegisterBuiltinsOnFS(v *shellfish.VirtualOS, fs *mounts.MemFS) error {
+// RegisterBuiltinsOnFS registers standard grasp utilities on the given MemFS at /usr/bin.
+func RegisterBuiltinsOnFS(v *grasp.VirtualOS, fs *mounts.MemFS) error {
 	registerAllBuiltins(v, fs, "usr/bin/")
 	return nil
 }
 
-func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string) {
+func registerAllBuiltins(v *grasp.VirtualOS, fs *mounts.MemFS, prefix string) {
 	fs.AddExecFunc(prefix+"ls", builtinLs(v), mounts.FuncMeta{
 		Description: "List directory entries",
 		Usage:       "ls [path]",

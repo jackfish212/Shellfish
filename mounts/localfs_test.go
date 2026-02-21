@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 func setupLocalFS(t *testing.T) (*LocalFS, string) {

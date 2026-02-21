@@ -1,4 +1,4 @@
-// Example: Using Shellfish with Mem0 API (HTTP direct)
+// Example: Using grasp with Mem0 API (HTTP direct)
 //
 // This example demonstrates how to use Mem0's REST API directly
 // for persistent memory capabilities. No local Python required.
@@ -27,9 +27,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 	"github.com/joho/godotenv"
 )
 
@@ -240,9 +240,9 @@ func main() {
 
 	ctx := context.Background()
 
-	// Initialize Shellfish VirtualOS
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	// Initialize grasp VirtualOS
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		log.Fatalf("Configure VOS: %v", err)
 	}
@@ -255,7 +255,7 @@ func main() {
 	}
 	userID := os.Getenv("MEM0_USER_ID")
 	if userID == "" {
-		userID = "shellfish-user"
+		userID = "grasp-user"
 	}
 
 	mem0Client := NewMem0HTTPClient(apiKey, userID)
@@ -322,7 +322,7 @@ func main() {
 	}
 
 	fmt.Println("\n========================================")
-	fmt.Println("  Shellfish + Mem0 MCP Integration")
+	fmt.Println("  grasp + Mem0 MCP Integration")
 	fmt.Println("========================================")
 	fmt.Println()
 	fmt.Println("The AI agent can:")
@@ -338,7 +338,7 @@ func main() {
 	}
 }
 
-func runInteractiveMode(ctx context.Context, v *shellfish.VirtualOS, mem0Client mounts.MCPClient, client anthropic.Client, shellTool, memoryTool anthropic.ToolParam) {
+func runInteractiveMode(ctx context.Context, v *grasp.VirtualOS, mem0Client mounts.MCPClient, client anthropic.Client, shellTool, memoryTool anthropic.ToolParam) {
 	fmt.Println("Interactive Mode")
 	fmt.Println("=============== ")
 	fmt.Println("Type your message and press Enter to chat.")
@@ -389,7 +389,7 @@ Be proactive about storing and retrieving memories to provide personalized assis
 	}
 }
 
-func runDemoMode(ctx context.Context, v *shellfish.VirtualOS, mem0Client mounts.MCPClient, client anthropic.Client, shellTool, memoryTool anthropic.ToolParam) {
+func runDemoMode(ctx context.Context, v *grasp.VirtualOS, mem0Client mounts.MCPClient, client anthropic.Client, shellTool, memoryTool anthropic.ToolParam) {
 	fmt.Println("Demo Mode")
 	fmt.Println("=========")
 	fmt.Println()
@@ -418,7 +418,7 @@ func runDemoMode(ctx context.Context, v *shellfish.VirtualOS, mem0Client mounts.
 
 1. First, search your memory for any existing information about this user
 2. If you find preferences, acknowledge them
-3. Store a new memory: the user is working on a project called "Shellfish"
+3. Store a new memory: the user is working on a project called "grasp"
 4. Search your memory again to confirm the new memory was stored
 5. Summarize all the memories you found about this user
 
@@ -443,7 +443,7 @@ Always check memory first to provide personalized responses based on past intera
 	fmt.Println("\n[Demo Complete]")
 }
 
-func processWithAgent(ctx context.Context, v *shellfish.VirtualOS, mem0Client mounts.MCPClient, client anthropic.Client, shellTool, memoryTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
+func processWithAgent(ctx context.Context, v *grasp.VirtualOS, mem0Client mounts.MCPClient, client anthropic.Client, shellTool, memoryTool anthropic.ToolParam, messages []anthropic.MessageParam, systemPrompt string) []anthropic.MessageParam {
 	sh := v.Shell("agent")
 	model := getModel()
 
@@ -492,9 +492,9 @@ func processWithAgent(ctx context.Context, v *shellfish.VirtualOS, mem0Client mo
 
 				case "memory":
 					var input struct {
-						Action    string `json:"action"`
-						Content   string `json:"content"`
-						MemoryID  string `json:"memory_id"`
+						Action   string `json:"action"`
+						Content  string `json:"content"`
+						MemoryID string `json:"memory_id"`
 					}
 					if err := json.Unmarshal([]byte(b.JSON.Input.Raw()), &input); err != nil {
 						result = fmt.Sprintf("Error parsing input: %v", err)

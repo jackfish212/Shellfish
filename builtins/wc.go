@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode"
 
-	shellfish "github.com/jackfish212/shellfish"
+	grasp "github.com/jackfish212/grasp"
 )
 
 type wcOpts struct {
@@ -27,7 +27,7 @@ type wcCounts struct {
 	maxLineLen int
 }
 
-func builtinWc(v *shellfish.VirtualOS) func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
+func builtinWc(v *grasp.VirtualOS) func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		opts, files, err := parseWcArgs(args)
 		if err != nil {
@@ -42,7 +42,7 @@ func builtinWc(v *shellfish.VirtualOS) func(ctx context.Context, args []string, 
 		}
 
 		// Get current working directory
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -178,7 +178,7 @@ func countReader(r io.Reader) *wcCounts {
 	return &counts
 }
 
-func countFile(v *shellfish.VirtualOS, ctx context.Context, path string) (*wcCounts, error) {
+func countFile(v *grasp.VirtualOS, ctx context.Context, path string) (*wcCounts, error) {
 	entry, err := v.Stat(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("wc: %s: %w", path, err)

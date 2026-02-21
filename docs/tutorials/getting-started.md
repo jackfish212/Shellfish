@@ -1,6 +1,6 @@
 # Getting Started
 
-This tutorial walks you through setting up Shellfish, mounting data sources, and running shell commands. By the end, you'll have a working virtual filesystem with local files, in-memory tools, and a shell interface.
+This tutorial walks you through setting up GRASP, mounting data sources, and running shell commands. By the end, you'll have a working virtual filesystem with local files, in-memory tools, and a shell interface.
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@ This tutorial walks you through setting up Shellfish, mounting data sources, and
 ## Install
 
 ```bash
-go get github.com/jackfish212/shellfish@latest
+go get github.com/jackfish212/grasp@latest
 ```
 
 ## Minimal Example
@@ -24,17 +24,17 @@ import (
     "context"
     "fmt"
 
-    "github.com/jackfish212/shellfish"
-    "github.com/jackfish212/shellfish/builtins"
-    "github.com/jackfish212/shellfish/mounts"
+    "github.com/jackfish212/grasp"
+    "github.com/jackfish212/grasp/builtins"
+    "github.com/jackfish212/grasp/mounts"
 )
 
 func main() {
     // 1. Create the virtual OS
-    v := shellfish.New()
+    v := grasp.New()
 
     // 2. Configure standard filesystem layout (/bin, /usr, /etc, /proc, ...)
-    rootFS, err := shellfish.Configure(v)
+    rootFS, err := grasp.Configure(v)
     if err != nil {
         panic(err)
     }
@@ -43,7 +43,7 @@ func main() {
     builtins.RegisterBuiltinsOnFS(v, rootFS)
 
     // 4. Mount a local directory
-    v.Mount("/data", mounts.NewLocalFS(".", shellfish.PermRW))
+    v.Mount("/data", mounts.NewLocalFS(".", grasp.PermRW))
 
     // 5. Create a shell and run commands
     sh := v.Shell("agent")
@@ -63,17 +63,17 @@ Run it:
 go run main.go
 ```
 
-You'll see a listing of your current directory under `/data` and the Shellfish version string.
+You'll see a listing of your current directory under `/data` and the GRASP version string.
 
 ## Adding In-Memory Files
 
 You can add files directly to the root MemFS:
 
 ```go
-rootFS.AddFile("etc/motd", []byte("Welcome to Shellfish\n"), shellfish.PermRO)
+rootFS.AddFile("etc/motd", []byte("Welcome to GRASP\n"), grasp.PermRO)
 
 result := sh.Execute(ctx, "cat /etc/motd")
-// Output: Welcome to Shellfish
+// Output: Welcome to GRASP
 ```
 
 ## Registering Custom Commands
@@ -126,7 +126,7 @@ sh.Execute(ctx, "mkdir /tmp/work && echo 'created' || echo 'failed'")
 ## Mounting SQLite for Persistence
 
 ```go
-sqlFS, err := mounts.NewSQLiteFS("/var/data/memory.db", shellfish.PermRW)
+sqlFS, err := mounts.NewSQLiteFS("/var/data/memory.db", grasp.PermRW)
 if err != nil {
     panic(err)
 }

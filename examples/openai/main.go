@@ -1,4 +1,4 @@
-// Example: Using Shellfish with OpenAI Agents SDK
+// Example: Using grasp with OpenAI Agents SDK
 //
 // This example demonstrates how to give an AI agent a shell interface
 // through the openai-agents-go SDK. The agent can execute shell commands
@@ -22,10 +22,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 	"github.com/joho/godotenv"
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
 
 	"github.com/nlpodyssey/openai-agents-go/agents"
 	"github.com/openai/openai-go/v2/packages/param"
@@ -69,22 +69,22 @@ func main() {
 		log.Println("Using environment variables instead.")
 	}
 
-	// Initialize Shellfish VirtualOS
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	// Initialize grasp VirtualOS
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		panic(err)
 	}
 	builtins.RegisterBuiltinsOnFS(v, rootFS)
 
 	// Mount an in-memory filesystem for the project
-	memFS := mounts.NewMemFS(shellfish.PermRW)
+	memFS := mounts.NewMemFS(grasp.PermRW)
 	if err := v.Mount("/project", memFS); err != nil {
 		panic(fmt.Errorf("failed to mount /project: %w", err))
 	}
 
 	// Mount a local filesystem for persistent data storage
-	localFS := mounts.NewLocalFS(filepath.Join(".", "localfs-data"), shellfish.PermRW)
+	localFS := mounts.NewLocalFS(filepath.Join(".", "localfs-data"), grasp.PermRW)
 	if err := v.Mount("/data", localFS); err != nil {
 		panic(fmt.Errorf("failed to mount /data: %w", err))
 	}
@@ -123,7 +123,7 @@ Be helpful and complete tasks step by step.`).
 		// Use Chat Completions API instead of Responses API for better compatibility
 		// with OpenAI-compatible providers (e.g., Zhipu AI, Azure OpenAI)
 		provider := agents.NewOpenAIProvider(agents.OpenAIProviderParams{
-			BaseURL:     param.NewOpt(baseURL),
+			BaseURL:      param.NewOpt(baseURL),
 			UseResponses: param.NewOpt(false),
 		})
 		runner = agents.Runner{
@@ -145,7 +145,7 @@ Be helpful and complete tasks step by step.`).
 	ctx := context.Background()
 
 	// Start conversation
-	fmt.Println("Shellfish + OpenAI Agents SDK Example")
+	fmt.Println("grasp + OpenAI Agents SDK Example")
 	fmt.Println("======================================")
 	fmt.Println("Filesystems mounted:")
 	fmt.Println("  /project - in-memory filesystem (memfs)")
@@ -171,7 +171,7 @@ type ShellResult struct {
 }
 
 // createShellTool creates a function tool for shell command execution
-func createShellTool(v *shellfish.VirtualOS) agents.FunctionTool {
+func createShellTool(v *grasp.VirtualOS) agents.FunctionTool {
 	// Define the shell execution function
 	execShell := func(ctx context.Context, args ShellArgs) (ShellResult, error) {
 		sh := v.Shell("agent")
@@ -286,7 +286,7 @@ Use shell commands to work across both filesystems. The /data filesystem persist
 	fmt.Println("\n[Done]")
 }
 
-func setupVirtualProject(v *shellfish.VirtualOS) {
+func setupVirtualProject(v *grasp.VirtualOS) {
 	ctx := context.Background()
 
 	// Create README.md

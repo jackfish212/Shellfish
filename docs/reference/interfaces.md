@@ -2,9 +2,9 @@
 
 ## Provider Interfaces
 
-Package: `github.com/jackfish212/shellfish/types`
+Package: `github.com/jackfish212/grasp/types`
 
-Re-exported at package root: `github.com/jackfish212/shellfish`
+Re-exported at package root: `github.com/jackfish212/grasp`
 
 ### Provider
 
@@ -242,16 +242,16 @@ type SearchResult struct {
 
 ```go
 var (
-    ErrNotFound        = errors.New("shellfish: not found")
-    ErrNotExecutable   = errors.New("shellfish: not executable")
-    ErrNotReadable     = errors.New("shellfish: permission denied: not readable")
-    ErrNotWritable     = errors.New("shellfish: permission denied: not writable")
-    ErrIsDir           = errors.New("shellfish: is a directory")
-    ErrNotDir          = errors.New("shellfish: not a directory")
-    ErrAlreadyMounted  = errors.New("shellfish: path already mounted")
-    ErrMountUnderMount = errors.New("shellfish: mount under existing mount point")
-    ErrNotSupported    = errors.New("shellfish: operation not supported")
-    ErrParentNotExist  = errors.New("shellfish: parent directory does not exist")
+    ErrNotFound        = errors.New("grasp: not found")
+    ErrNotExecutable   = errors.New("grasp: not executable")
+    ErrNotReadable     = errors.New("grasp: permission denied: not readable")
+    ErrNotWritable     = errors.New("grasp: permission denied: not writable")
+    ErrIsDir           = errors.New("grasp: is a directory")
+    ErrNotDir          = errors.New("grasp: not a directory")
+    ErrAlreadyMounted  = errors.New("grasp: path already mounted")
+    ErrMountUnderMount = errors.New("grasp: mount under existing mount point")
+    ErrNotSupported    = errors.New("grasp: operation not supported")
+    ErrParentNotExist  = errors.New("grasp: parent directory does not exist")
 )
 ```
 
@@ -259,7 +259,7 @@ var (
 
 ## VirtualOS
 
-Package: `github.com/jackfish212/shellfish`
+Package: `github.com/jackfish212/grasp`
 
 ```go
 func New() *VirtualOS
@@ -306,9 +306,9 @@ type MountInfo struct {
 
 ## Shell
 
-Package: `github.com/jackfish212/shellfish/shell`
+Package: `github.com/jackfish212/grasp/shell`
 
-Re-exported at: `github.com/jackfish212/shellfish`
+Re-exported at: `github.com/jackfish212/grasp`
 
 ```go
 func NewShell(v VirtualOS, user string) *Shell
@@ -340,7 +340,7 @@ const MaxHistorySize = 1000
 
 ## Watcher (Filesystem Events)
 
-Package: `github.com/jackfish212/shellfish`
+Package: `github.com/jackfish212/grasp`
 
 ```go
 type WatchMask uint32
@@ -395,7 +395,7 @@ func (v VersionInfo) ProcVersion() string
 
 ## Providers
 
-Package: `github.com/jackfish212/shellfish/mounts`
+Package: `github.com/jackfish212/grasp/mounts`
 
 ### MemFS
 
@@ -446,10 +446,23 @@ func WithGitHubCacheTTL(ttl time.Duration) GitHubOption
 
 ### HTTPFS
 
-```go
-func NewHTTPFS(perm Perm) *HTTPFS
+> **Note:** HTTPFS has been moved to a separate package: `github.com/jackfish212/httpfs`
 
-func (fs *HTTPFS) Add(name, url string, parser ResponseParser)
+```go
+import "github.com/jackfish212/httpfs"
+
+func NewHTTPFS(opts ...HTTPFSOption) *HTTPFS
+
+func WithHTTPFSClient(c *http.Client) HTTPFSOption
+func WithHTTPFSInterval(d time.Duration) HTTPFSOption
+func WithHTTPFSOnEvent(fn func(EventType, string)) HTTPFSOption
+
+func (fs *HTTPFS) Add(name, url string, parser ResponseParser, opts ...SourceOption) error
+func (fs *HTTPFS) RemoveSource(name string) error
+func (fs *HTTPFS) Start(ctx context.Context)
+func (fs *HTTPFS) Stop()
+func (fs *HTTPFS) LoadSchema(data []byte) error
+func (fs *HTTPFS) LoadOpenAPI(spec []byte, opts ...SourceOption) error
 
 type ResponseParser interface {
     Parse(body []byte) ([]ParsedFile, error)
@@ -509,11 +522,11 @@ type FuncMeta struct {
 
 ## Builtins
 
-Package: `github.com/jackfish212/shellfish/builtins`
+Package: `github.com/jackfish212/grasp/builtins`
 
 ```go
-func RegisterBuiltins(v *shellfish.VirtualOS, mountPath string) error
-func RegisterBuiltinsOnFS(v *shellfish.VirtualOS, fs *mounts.MemFS) error
+func RegisterBuiltins(v *grasp.VirtualOS, mountPath string) error
+func RegisterBuiltinsOnFS(v *grasp.VirtualOS, fs *mounts.MemFS) error
 ```
 
 Registered commands (at `/usr/bin/`):

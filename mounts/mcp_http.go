@@ -180,7 +180,7 @@ func (c *HttpMCPClient) Initialize(ctx context.Context) (map[string]any, error) 
 		"protocolVersion": "2025-03-26",
 		"capabilities":    map[string]any{},
 		"clientInfo": map[string]any{
-			"name":    "shellfish-mcp-client",
+			"name":    "grasp-mcp-client",
 			"version": "1.0.0",
 		},
 	}

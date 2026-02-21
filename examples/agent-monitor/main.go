@@ -1,6 +1,6 @@
 // Example: Agent Monitor — watching user shell activity with VFS hooks
 //
-// This example demonstrates Shellfish's two reactive primitives:
+// This example demonstrates grasp's two reactive primitives:
 //
 //   - VOS.Watch  — inotify-style file change notifications
 //   - Shell.OnExec — post-execution callback hooks
@@ -27,10 +27,10 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
-	"github.com/jackfish212/shellfish/shell"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
+	"github.com/jackfish212/grasp/shell"
 	"github.com/joho/godotenv"
 )
 
@@ -40,14 +40,14 @@ func main() {
 		log.Printf("Warning: could not load .env: %v", err)
 	}
 
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		log.Fatalf("configure: %v", err)
 	}
 	builtins.RegisterBuiltinsOnFS(v, rootFS)
 
-	workspace := mounts.NewMemFS(shellfish.PermRW)
+	workspace := mounts.NewMemFS(grasp.PermRW)
 	if err := v.Mount("/workspace", workspace); err != nil {
 		log.Fatalf("mount /workspace: %v", err)
 	}
@@ -61,7 +61,7 @@ func main() {
 	defer monitor.stop()
 
 	fmt.Println("╔══════════════════════════════════════════════════════════╗")
-	fmt.Println("║          Shellfish Agent Monitor Demo                   ║")
+	fmt.Println("║          grasp Agent Monitor Demo                   ║")
 	fmt.Println("╠══════════════════════════════════════════════════════════╣")
 	fmt.Println("║  You type shell commands; an AI agent watches silently. ║")
 	fmt.Println("║  When you hit an error or edit watched files,           ║")
@@ -80,7 +80,7 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Printf("\033[1;32muser@shellfish\033[0m:\033[1;34m%s\033[0m$ ", sh.Cwd())
+		fmt.Printf("\033[1;32muser@grasp\033[0m:\033[1;34m%s\033[0m$ ", sh.Cwd())
 		input, err := reader.ReadString('\n')
 		if err != nil {
 			break
@@ -104,17 +104,17 @@ func main() {
 // ─── Agent Monitor ───
 
 type agentMonitor struct {
-	v        *shellfish.VirtualOS
-	sh       *shellfish.Shell
+	v        *grasp.VirtualOS
+	sh       *grasp.Shell
 	client   anthropic.Client
 	messages []anthropic.MessageParam
-	watcher  *shellfish.Watcher
+	watcher  *grasp.Watcher
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
 	mu       sync.Mutex
 }
 
-func newAgentMonitor(v *shellfish.VirtualOS, sh *shellfish.Shell, client anthropic.Client) *agentMonitor {
+func newAgentMonitor(v *grasp.VirtualOS, sh *grasp.Shell, client anthropic.Client) *agentMonitor {
 	return &agentMonitor{
 		v:      v,
 		sh:     sh,
@@ -134,7 +134,7 @@ func (m *agentMonitor) start() {
 	})
 
 	// Hook 2: watch file changes under /workspace
-	m.watcher = m.v.Watch("/workspace", shellfish.EventAll)
+	m.watcher = m.v.Watch("/workspace", grasp.EventAll)
 	m.wg.Add(1)
 	go func() {
 		defer m.wg.Done()
@@ -171,7 +171,7 @@ func (m *agentMonitor) onCommandFailed(ctx context.Context, cmdLine string, resu
 	m.agentRespond(ctx, prompt)
 }
 
-func (m *agentMonitor) onFileChanged(ctx context.Context, ev shellfish.WatchEvent) {
+func (m *agentMonitor) onFileChanged(ctx context.Context, ev grasp.WatchEvent) {
 	prompt := fmt.Sprintf(
 		"A file change was detected in the virtual filesystem.\n\n"+
 			"Event: %s\nPath: %s\nTime: %s\n\n"+
@@ -203,7 +203,7 @@ func (m *agentMonitor) agentRespond(ctx context.Context, trigger string) {
 		},
 	}
 
-	systemPrompt := `You are a helpful shell assistant that monitors the user's activity in a Shellfish virtual filesystem. 
+	systemPrompt := `You are a helpful shell assistant that monitors the user's activity in a grasp virtual filesystem. 
 You observe command failures and file changes, then offer concise, actionable help.
 When you need more context, use the shell tool to inspect files or directories.
 Keep your responses brief — the user is in the middle of working.`
@@ -254,7 +254,7 @@ Keep your responses brief — the user is in the middle of working.`
 	}
 }
 
-func executeInAgentShell(v *shellfish.VirtualOS, command string) string {
+func executeInAgentShell(v *grasp.VirtualOS, command string) string {
 	agentSh := v.Shell("agent")
 	result := agentSh.Execute(context.Background(), command)
 	if result.Code != 0 && result.Output == "" {
@@ -277,7 +277,7 @@ func newAnthropicClient() anthropic.Client {
 	return anthropic.NewClient()
 }
 
-func seedWorkspace(v *shellfish.VirtualOS) {
+func seedWorkspace(v *grasp.VirtualOS) {
 	ctx := context.Background()
 	v.Write(ctx, "/workspace/README.md", strings.NewReader(`# My Project
 A demo workspace for the agent-monitor example.

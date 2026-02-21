@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 // VikingClient abstracts the OpenViking HTTP API.
@@ -39,14 +39,14 @@ type VikingClient interface {
 
 // VikingEntry represents a filesystem entry returned by OpenViking.
 type VikingEntry struct {
-	URI        string `json:"uri"`
-	Name       string `json:"name"`
-	IsDir      bool   `json:"is_dir"`
-	Abstract   string `json:"abstract"`
+	URI         string `json:"uri"`
+	Name        string `json:"name"`
+	IsDir       bool   `json:"is_dir"`
+	Abstract    string `json:"abstract"`
 	ContextType string `json:"context_type"`
-	Size       int64  `json:"size"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
+	Size        int64  `json:"size"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 // VikingSearchHit represents a search result from OpenViking.
@@ -294,7 +294,7 @@ func (c *vikingHTTPClient) Find(ctx context.Context, query string, targetURI str
 }
 
 // ---------------------------------------------------------------------------
-// VikingProvider — Shellfish Provider backed by an OpenViking server
+// VikingProvider — grasp Provider backed by an OpenViking server
 // ---------------------------------------------------------------------------
 
 var (
@@ -305,8 +305,8 @@ var (
 	_ types.Mutable    = (*VikingProvider)(nil)
 )
 
-// VikingProvider exposes an OpenViking context database as a Shellfish
-// filesystem. Paths inside Shellfish map to viking:// URIs:
+// VikingProvider exposes an OpenViking context database as a grasp
+// filesystem. Paths inside grasp map to viking:// URIs:
 //
 //	/ctx/resources/my_project  →  viking://resources/my_project
 //

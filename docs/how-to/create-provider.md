@@ -1,10 +1,10 @@
 # Create a Custom Provider
 
-This guide shows how to implement a custom Shellfish provider — a mountable data source that integrates into the virtual filesystem.
+This guide shows how to implement a custom GRASP provider — a mountable data source that integrates into the virtual filesystem.
 
 ## Decide What to Implement
 
-Shellfish providers are built from composable interfaces. Start with the base `Provider`, then add capabilities as needed:
+GRASP providers are built from composable interfaces. Start with the base `Provider`, then add capabilities as needed:
 
 | Interface | Methods | When to implement |
 |-----------|---------|-------------------|
@@ -31,7 +31,7 @@ import (
     "strings"
     "time"
 
-    "github.com/jackfish212/shellfish"
+    "github.com/jackfish212/grasp"
 )
 
 type WeatherProvider struct {
@@ -47,19 +47,19 @@ func New(apiKey string, cities []string) *WeatherProvider {
 ### Step 2: Implement Provider (Stat + List)
 
 ```go
-func (wp *WeatherProvider) Stat(ctx context.Context, path string) (*shellfish.Entry, error) {
+func (wp *WeatherProvider) Stat(ctx context.Context, path string) (*grasp.Entry, error) {
     path = strings.TrimPrefix(path, "/")
 
     if path == "" {
-        return &shellfish.Entry{Name: "weather", IsDir: true, Perm: shellfish.PermRO}, nil
+        return &grasp.Entry{Name: "weather", IsDir: true, Perm: grasp.PermRO}, nil
     }
 
     city := strings.TrimSuffix(path, ".md")
     for _, c := range wp.cities {
         if c == city {
-            return &shellfish.Entry{
+            return &grasp.Entry{
                 Name:     city + ".md",
-                Perm:     shellfish.PermRO,
+                Perm:     grasp.PermRO,
                 MimeType: "text/markdown",
                 Modified: time.Now(),
             }, nil
@@ -69,17 +69,17 @@ func (wp *WeatherProvider) Stat(ctx context.Context, path string) (*shellfish.En
     return nil, fmt.Errorf("not found: %s", path)
 }
 
-func (wp *WeatherProvider) List(ctx context.Context, path string, opts shellfish.ListOpts) ([]shellfish.Entry, error) {
+func (wp *WeatherProvider) List(ctx context.Context, path string, opts grasp.ListOpts) ([]grasp.Entry, error) {
     path = strings.TrimPrefix(path, "/")
     if path != "" {
         return nil, fmt.Errorf("not a directory: %s", path)
     }
 
-    entries := make([]shellfish.Entry, len(wp.cities))
+    entries := make([]grasp.Entry, len(wp.cities))
     for i, city := range wp.cities {
-        entries[i] = shellfish.Entry{
+        entries[i] = grasp.Entry{
             Name:     city + ".md",
-            Perm:     shellfish.PermRO,
+            Perm:     grasp.PermRO,
             MimeType: "text/markdown",
         }
     }
@@ -90,7 +90,7 @@ func (wp *WeatherProvider) List(ctx context.Context, path string, opts shellfish
 ### Step 3: Implement Readable (Open)
 
 ```go
-func (wp *WeatherProvider) Open(ctx context.Context, path string) (shellfish.File, error) {
+func (wp *WeatherProvider) Open(ctx context.Context, path string) (grasp.File, error) {
     path = strings.TrimPrefix(path, "/")
     city := strings.TrimSuffix(path, ".md")
 
@@ -99,9 +99,9 @@ func (wp *WeatherProvider) Open(ctx context.Context, path string) (shellfish.Fil
         return nil, err
     }
 
-    entry := &shellfish.Entry{Name: city + ".md", Perm: shellfish.PermRO}
+    entry := &grasp.Entry{Name: city + ".md", Perm: grasp.PermRO}
     reader := io.NopCloser(strings.NewReader(data))
-    return shellfish.NewFile(city+".md", entry, reader), nil
+    return grasp.NewFile(city+".md", entry, reader), nil
 }
 
 func (wp *WeatherProvider) fetchWeather(city string) (string, error) {
@@ -113,8 +113,8 @@ func (wp *WeatherProvider) fetchWeather(city string) (string, error) {
 ### Step 4: Mount and use
 
 ```go
-v := shellfish.New()
-rootFS, _ := shellfish.Configure(v)
+v := grasp.New()
+rootFS, _ := grasp.Configure(v)
 builtins.RegisterBuiltinsOnFS(v, rootFS)
 
 wp := weather.New("api-key", []string{"tokyo", "london", "beijing"})
@@ -135,12 +135,12 @@ sh.Execute(ctx, "cat /weather/tokyo.md")
 If your data source supports queries, implement `Searchable`:
 
 ```go
-func (wp *WeatherProvider) Search(ctx context.Context, query string, opts shellfish.SearchOpts) ([]shellfish.SearchResult, error) {
-    var results []shellfish.SearchResult
+func (wp *WeatherProvider) Search(ctx context.Context, query string, opts grasp.SearchOpts) ([]grasp.SearchResult, error) {
+    var results []grasp.SearchResult
     for _, city := range wp.cities {
         if strings.Contains(strings.ToLower(city), strings.ToLower(query)) {
-            results = append(results, shellfish.SearchResult{
-                Entry: shellfish.Entry{Name: city + ".md", Path: city + ".md"},
+            results = append(results, grasp.SearchResult{
+                Entry: grasp.Entry{Name: city + ".md", Path: city + ".md"},
                 Score: 1.0,
             })
         }
@@ -169,6 +169,6 @@ $ mount
 ## Guidelines
 
 - **Return clean paths.** `Stat` and `List` receive paths relative to the mount point, with the leading `/` stripped. `""` means the mount root.
-- **Set `Perm` correctly.** Shellfish checks permissions before delegating to your provider. If an entry has `PermRO`, write attempts are rejected before reaching your code.
+- **Set `Perm` correctly.** GRASP checks permissions before delegating to your provider. If an entry has `PermRO`, write attempts are rejected before reaching your code.
 - **Use `Meta` for provider-specific data.** The `Entry.Meta` map carries arbitrary key-value pairs. Use it for schema info, scores, tiers, or any metadata the agent might need.
 - **Be concurrent-safe.** Multiple shell instances may access your provider simultaneously. Use appropriate synchronization if your provider has mutable state.

@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinLs(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinLs(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, _ io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("ls — list directory entries\nUsage: ls [path...]\n")), nil
@@ -18,7 +18,7 @@ func builtinLs(v *shellfish.VirtualOS) mounts.ExecFunc {
 
 		showLong, showAll, filteredArgs := parseLsFlags(args)
 
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -40,20 +40,20 @@ func builtinLs(v *shellfish.VirtualOS) mounts.ExecFunc {
 				buf.WriteString(target)
 				buf.WriteString(":\n")
 			}
-			entries, err := v.List(ctx, target, shellfish.ListOpts{})
+			entries, err := v.List(ctx, target, grasp.ListOpts{})
 			if err != nil {
 				if entry, statErr := v.Stat(ctx, target); statErr == nil {
-					entries = []shellfish.Entry{*entry}
+					entries = []grasp.Entry{*entry}
 				} else {
 					return nil, fmt.Errorf("ls: %w", err)
 				}
 			}
 			if len(entries) == 0 {
 				if entry, statErr := v.Stat(ctx, target); statErr == nil {
-					entries = []shellfish.Entry{*entry}
+					entries = []grasp.Entry{*entry}
 				}
 			}
-			var filteredEntries []shellfish.Entry
+			var filteredEntries []grasp.Entry
 			for _, e := range entries {
 				if !showAll && strings.HasPrefix(e.Name, ".") {
 					continue

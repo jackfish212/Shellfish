@@ -1,6 +1,6 @@
 # Shell as Universal Interface
 
-Most agent frameworks interact with tools through structured API calls — JSON-schema-defined functions that the LLM invokes by name. Shellfish takes a different approach: **the shell is the interface.**
+Most agent frameworks interact with tools through structured API calls — JSON-schema-defined functions that the LLM invokes by name. GRASP takes a different approach: **the shell is the interface.**
 
 ## The Problem with Tool APIs
 
@@ -24,7 +24,7 @@ To find TODO items in log files, the agent must:
 3. Parse results, filter for TODOs
 4. Multiple round-trips, multiple tool calls, high token cost
 
-With Shellfish, the same task is one call:
+With GRASP, the same task is one call:
 
 ```bash
 grep TODO /logs/*.md
@@ -49,9 +49,9 @@ LLMs have been trained on billions of lines of shell commands, man pages, and St
 
 This is not speculation — it's the reason projects like Claude Code, Cursor, and Codex all provide shell access to their agents. **Shell is the most token-efficient and composable interface available.**
 
-## Shellfish Shell vs. Real Shell
+## GRASP Shell vs. Real Shell
 
-Shellfish's shell is not bash. It deliberately limits scope:
+GRASP's shell is not bash. It deliberately limits scope:
 
 **Included (useful for agents):**
 - Command execution with arguments
@@ -76,12 +76,12 @@ This is intentional. Agents don't need a Turing-complete shell — they have the
 
 ## One Tool, Many Operations
 
-From the agent framework's perspective, Shellfish exposes a single tool:
+From the agent framework's perspective, GRASP exposes a single tool:
 
 ```json
 {
   "name": "shell",
-  "description": "Execute a command in the Shellfish virtual filesystem",
+  "description": "Execute a command in the GRASP virtual filesystem",
   "parameters": {
     "command": {"type": "string", "description": "Shell command to execute"}
   }
@@ -102,7 +102,7 @@ Compare this with traditional approaches that require 10+ separate tool definiti
 
 ## Discoverability
 
-A key advantage of the filesystem metaphor is **discoverability**. An agent dropped into an unfamiliar Shellfish environment can orient itself:
+A key advantage of the filesystem metaphor is **discoverability**. An agent dropped into an unfamiliar GRASP environment can orient itself:
 
 ```bash
 $ ls /

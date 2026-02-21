@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 var (
@@ -21,7 +21,7 @@ var (
 	_ types.Touchable  = (*LocalFS)(nil)
 )
 
-// LocalFS mounts a host directory into shellfish.
+// LocalFS mounts a host directory into grasp.
 type LocalFS struct {
 	root string
 	perm types.Perm

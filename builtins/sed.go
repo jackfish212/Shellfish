@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
+	grasp "github.com/jackfish212/grasp"
 	"github.com/rwtodd/Go.Sed/sed"
 )
 
@@ -17,7 +17,7 @@ type sedOpts struct {
 	inPlace bool
 }
 
-func builtinSed(v *shellfish.VirtualOS) func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
+func builtinSed(v *grasp.VirtualOS) func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		opts := sedOpts{}
 		files, err := parseSedArgs(args, &opts)
@@ -29,7 +29,7 @@ func builtinSed(v *shellfish.VirtualOS) func(ctx context.Context, args []string,
 		var program string
 		if opts.file != "" {
 			// Read sed program from file
-			cwd := shellfish.Env(ctx, "PWD")
+			cwd := grasp.Env(ctx, "PWD")
 			if cwd == "" {
 				cwd = "/"
 			}
@@ -83,7 +83,7 @@ func builtinSed(v *shellfish.VirtualOS) func(ctx context.Context, args []string,
 			}
 			result.WriteString(output)
 		} else {
-			cwd := shellfish.Env(ctx, "PWD")
+			cwd := grasp.Env(ctx, "PWD")
 			if cwd == "" {
 				cwd = "/"
 			}
@@ -112,8 +112,8 @@ func builtinSed(v *shellfish.VirtualOS) func(ctx context.Context, args []string,
 	}
 }
 
-func sedInPlace(v *shellfish.VirtualOS, engine *sed.Engine, files []string, ctx context.Context) (io.ReadCloser, error) {
-	cwd := shellfish.Env(ctx, "PWD")
+func sedInPlace(v *grasp.VirtualOS, engine *sed.Engine, files []string, ctx context.Context) (io.ReadCloser, error) {
+	cwd := grasp.Env(ctx, "PWD")
 	if cwd == "" {
 		cwd = "/"
 	}

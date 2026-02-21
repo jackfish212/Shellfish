@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinWhich(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinWhich(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, _ io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("which — show full path of command\nUsage: which <command>...\n")), nil
@@ -19,7 +19,7 @@ func builtinWhich(v *shellfish.VirtualOS) mounts.ExecFunc {
 			return nil, fmt.Errorf("missing argument")
 		}
 
-		pathStr := shellfish.Env(ctx, "PATH")
+		pathStr := grasp.Env(ctx, "PATH")
 		if pathStr == "" {
 			pathStr = "/bin"
 		}

@@ -1,6 +1,6 @@
 # Architecture
 
-Shellfish has three layers: the VirtualOS orchestrator, the Shell interface, and the Provider backends. This document explains how they work together.
+GRASP has three layers: the VirtualOS orchestrator, the Shell interface, and the Provider backends. This document explains how they work together.
 
 ## VirtualOS
 
@@ -34,7 +34,7 @@ Key behaviors:
 
 - **Virtual directories.** If providers are mounted at `/data/a` and `/data/b`, then `/data` automatically exists as a virtual directory containing `a` and `b`, even if no provider is mounted at `/data` itself.
 
-- **Mount merging.** When listing a directory, Shellfish merges entries from the resolved provider with virtual directory entries from child mounts. This means `ls /` shows both files from the root provider and mount point directories.
+- **Mount merging.** When listing a directory, GRASP merges entries from the resolved provider with virtual directory entries from child mounts. This means `ls /` shows both files from the root provider and mount point directories.
 
 - **Resolution caching.** The mount table caches path-to-provider resolutions and invalidates the cache on mount/unmount operations.
 
@@ -52,7 +52,7 @@ An agent running `ls /` sees: `bin/  data/  knowledge/  proc/  tools/  ...`
 
 ## Shell
 
-The Shell is Shellfish's primary interaction interface. It provides a familiar command-line environment with:
+The Shell is GRASP's primary interaction interface. It provides a familiar command-line environment with:
 
 **Built-in commands** (handled directly by Shell):
 - `cd`, `pwd` — navigation
@@ -85,7 +85,7 @@ The Shell is Shellfish's primary interaction interface. It provides a familiar c
 The `Configure()` function sets up a standard filesystem layout:
 
 ```go
-rootFS, err := shellfish.Configure(v)
+rootFS, err := grasp.Configure(v)
 ```
 
 This:
@@ -97,12 +97,12 @@ After `Configure()`, you mount your own providers and register additional builti
 
 ```go
 builtins.RegisterBuiltinsOnFS(v, rootFS)   // adds ls, cat, write, etc.
-v.Mount("/data", mounts.NewLocalFS("/workspace", shellfish.PermRW))
+v.Mount("/data", mounts.NewLocalFS("/workspace", grasp.PermRW))
 ```
 
 ## Concurrency Model
 
-Shellfish is designed for parallel-safe use:
+GRASP is designed for parallel-safe use:
 
 - `MountTable` uses `sync.RWMutex` for concurrent access.
 - Each `Shell` instance is independent — create one per agent session.

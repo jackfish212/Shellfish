@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 
 	_ "modernc.org/sqlite"
 )

@@ -6,11 +6,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinSearch(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinSearch(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader(`search — cross-mount search
@@ -50,11 +50,11 @@ Usage: search <query> [--scope <path>] [--max N]
 		if len(args) == 0 {
 			return nil, fmt.Errorf("search: missing query")
 		}
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
-		opts := shellfish.SearchOpts{MaxResults: 20}
+		opts := grasp.SearchOpts{MaxResults: 20}
 		query := args[0]
 		for i := 1; i < len(args); i++ {
 			switch args[i] {

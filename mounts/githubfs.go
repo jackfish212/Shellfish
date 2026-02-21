@@ -1,4 +1,4 @@
-// Package mounts provides built-in Mount implementations for shellfish.
+// Package mounts provides built-in Mount implementations for grasp.
 package mounts
 
 import (
@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 // Compile-time interface checks
@@ -40,14 +40,14 @@ var (
 //	cat /repos/golang/go/issues/123     -> read issue #123
 //	search "bug" --scope /repos/owner/repo/issues
 type GitHubFS struct {
-	client    *http.Client
-	token     string
-	baseURL   string
-	user      string // GitHub username/org for /repos listing
-	perm      types.Perm
-	cache     map[string]*cacheEntry
-	cacheMu   sync.RWMutex
-	cacheTTL  time.Duration
+	client   *http.Client
+	token    string
+	baseURL  string
+	user     string // GitHub username/org for /repos listing
+	perm     types.Perm
+	cache    map[string]*cacheEntry
+	cacheMu  sync.RWMutex
+	cacheTTL time.Duration
 }
 
 type cacheEntry struct {
@@ -324,11 +324,11 @@ func (fs *GitHubFS) Search(ctx context.Context, query string, opts types.SearchO
 // --- GitHub API types ---
 
 type githubRepo struct {
-	Name          string `json:"name"`
-	FullName      string `json:"full_name"`
-	Description   string `json:"description"`
-	StargazersCount int  `json:"stargazers_count"`
-	Private       bool   `json:"private"`
+	Name            string `json:"name"`
+	FullName        string `json:"full_name"`
+	Description     string `json:"description"`
+	StargazersCount int    `json:"stargazers_count"`
+	Private         bool   `json:"private"`
 }
 
 type githubContent struct {
@@ -338,19 +338,19 @@ type githubContent struct {
 }
 
 type githubIssue struct {
-	Number    int       `json:"number"`
-	Title     string    `json:"title"`
-	State     string    `json:"state"`
-	Body      string    `json:"body"`
-	User      struct{ Login string } `json:"user"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Number    int                     `json:"number"`
+	Title     string                  `json:"title"`
+	State     string                  `json:"state"`
+	Body      string                  `json:"body"`
+	User      struct{ Login string }  `json:"user"`
+	CreatedAt time.Time               `json:"created_at"`
+	UpdatedAt time.Time               `json:"updated_at"`
 	Labels    []struct{ Name string } `json:"labels"`
 }
 
 type githubSearchResult struct {
-	TotalCount int            `json:"total_count"`
-	Items      []githubIssue  `json:"items"`
+	TotalCount int           `json:"total_count"`
+	Items      []githubIssue `json:"items"`
 }
 
 // --- API methods ---

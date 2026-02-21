@@ -7,12 +7,12 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 	gojsonq "github.com/thedevsaddam/gojsonq/v2"
 )
 
-func builtinJsonq(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinJsonq(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
 		opts, queryPath, files, err := parseJsonqArgs(args)
 		if err != nil {
@@ -20,7 +20,7 @@ func builtinJsonq(v *shellfish.VirtualOS) mounts.ExecFunc {
 		}
 
 		// Get current working directory
-		cwd := shellfish.Env(ctx, "PWD")
+		cwd := grasp.Env(ctx, "PWD")
 		if cwd == "" {
 			cwd = "/"
 		}
@@ -75,23 +75,23 @@ func builtinJsonq(v *shellfish.VirtualOS) mounts.ExecFunc {
 }
 
 type jsonqOpts struct {
-	from      string // -f, --from path to start query from
-	where     string // -w, --where condition (key op value)
-	orWhere   string // --or-where condition
-	whereIn   string // --where-in condition (key val1,val2,...)
-	whereNil  string // --where-nil key
-	whereNotNil string // --where-not-nil key
-	sortBy    string // --sort-by property
-	sortOrder string // --sort-order asc/desc
-	groupBy   string // --group-by property
-	distinct  string // --distinct property
-	limit     int    // -n, --limit N
-	offset    int    // --offset N
-	pluck     string // --pluck property
-	selectFields string // -s, --select fields (comma separated)
-	aggregate string // --sum, --avg, --min, --max, --count
+	from          string // -f, --from path to start query from
+	where         string // -w, --where condition (key op value)
+	orWhere       string // --or-where condition
+	whereIn       string // --where-in condition (key val1,val2,...)
+	whereNil      string // --where-nil key
+	whereNotNil   string // --where-not-nil key
+	sortBy        string // --sort-by property
+	sortOrder     string // --sort-order asc/desc
+	groupBy       string // --group-by property
+	distinct      string // --distinct property
+	limit         int    // -n, --limit N
+	offset        int    // --offset N
+	pluck         string // --pluck property
+	selectFields  string // -s, --select fields (comma separated)
+	aggregate     string // --sum, --avg, --min, --max, --count
 	aggregateProp string // property for aggregation
-	raw       bool   // -r, --raw output raw value without JSON encoding
+	raw           bool   // -r, --raw output raw value without JSON encoding
 }
 
 func parseJsonqArgs(args []string) (jsonqOpts, string, []string, error) {

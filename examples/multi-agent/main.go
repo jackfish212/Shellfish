@@ -1,4 +1,4 @@
-// Multi-Agent Collaboration — Three agents share a Shellfish VOS namespace
+// Multi-Agent Collaboration — Three agents share a grasp VOS namespace
 // and collaborate through the filesystem: Explorer -> Architect -> Reporter.
 //
 // Each agent has an isolated shell (own cwd, env, history) but sees the same
@@ -29,9 +29,9 @@ import (
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/shared/constant"
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 	"github.com/joho/godotenv"
 )
 
@@ -52,23 +52,23 @@ func main() {
 		log.Printf("Warning: .env not loaded: %v", err)
 	}
 
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		log.Fatalf("Configure: %v", err)
 	}
 	builtins.RegisterBuiltinsOnFS(v, rootFS)
 
-	if err := v.Mount("/project", mounts.NewMemFS(shellfish.PermRW)); err != nil {
+	if err := v.Mount("/project", mounts.NewMemFS(grasp.PermRW)); err != nil {
 		log.Fatalf("mount /project: %v", err)
 	}
-	if err := v.Mount("/shared", mounts.NewMemFS(shellfish.PermRW)); err != nil {
+	if err := v.Mount("/shared", mounts.NewMemFS(grasp.PermRW)); err != nil {
 		log.Fatalf("mount /shared: %v", err)
 	}
 
 	outputDir := filepath.Join(".", "output")
 	os.MkdirAll(outputDir, 0o755)
-	if err := v.Mount("/output", mounts.NewLocalFS(outputDir, shellfish.PermRW)); err != nil {
+	if err := v.Mount("/output", mounts.NewLocalFS(outputDir, grasp.PermRW)); err != nil {
 		log.Fatalf("mount /output: %v", err)
 	}
 
@@ -80,7 +80,7 @@ func main() {
 	seedProject(v)
 
 	fmt.Println("========================================")
-	fmt.Println("  Shellfish Multi-Agent Collaboration")
+	fmt.Println("  grasp Multi-Agent Collaboration")
 	fmt.Println("========================================")
 	fmt.Println()
 	fmt.Println("Three agents share one VOS namespace,")
@@ -183,7 +183,7 @@ Read all input files before writing the report.`,
 
 // runAgent drives one agent through the LLM tool-use loop.
 // The shell persists across all tool calls — cd, env, and history carry over.
-func runAgent(ctx context.Context, v *shellfish.VirtualOS, agent Agent, client anthropic.Client, tool anthropic.ToolParam) {
+func runAgent(ctx context.Context, v *grasp.VirtualOS, agent Agent, client anthropic.Client, tool anthropic.ToolParam) {
 	sh := v.Shell(agent.Name)
 	messages := []anthropic.MessageParam{
 		anthropic.NewUserMessage(anthropic.NewTextBlock(agent.Task)),
@@ -254,7 +254,7 @@ func runAgent(ctx context.Context, v *shellfish.VirtualOS, agent Agent, client a
 
 // seedProject populates /project with a small Go HTTP API that has
 // intentional design issues for the agents to discover and analyze.
-func seedProject(v *shellfish.VirtualOS) {
+func seedProject(v *grasp.VirtualOS) {
 	ctx := context.Background()
 
 	v.Write(ctx, "/project/README.md", strings.NewReader(`# BookStore API
@@ -369,7 +369,7 @@ func (s *Store) Delete(id string) error {
 	v.Write(ctx, "/project/handlers.go", strings.NewReader("package main\n\nimport (\n\t\"encoding/json\"\n\t\"net/http\"\n)\n\nfunc handleListBooks(w http.ResponseWriter, r *http.Request) {\n\tbooks := store.List()\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(books)\n}\n\nfunc handleGetBook(w http.ResponseWriter, r *http.Request) {\n\tid := r.PathValue(\"id\")\n\tbook, err := store.Get(id)\n\tif err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusNotFound)\n\t\treturn\n\t}\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tjson.NewEncoder(w).Encode(book)\n}\n\nfunc handleCreateBook(w http.ResponseWriter, r *http.Request) {\n\tvar input struct {\n\t\tTitle  string `json:\"title\"`\n\t\tAuthor string `json:\"author\"`\n\t\tYear   int    `json:\"year\"`\n\t}\n\t// TODO: validate required fields (title, author)\n\t// TODO: validate year is reasonable (1000-2100)\n\tjson.NewDecoder(r.Body).Decode(&input)\n\n\tbook := store.Create(input.Title, input.Author, input.Year)\n\tw.Header().Set(\"Content-Type\", \"application/json\")\n\tw.WriteHeader(http.StatusCreated)\n\tjson.NewEncoder(w).Encode(book)\n}\n\nfunc handleDeleteBook(w http.ResponseWriter, r *http.Request) {\n\tid := r.PathValue(\"id\")\n\tif err := store.Delete(id); err != nil {\n\t\thttp.Error(w, err.Error(), http.StatusNotFound)\n\t\treturn\n\t}\n\tw.WriteHeader(http.StatusNoContent)\n}\n"))
 }
 
-func listCreatedFiles(v *shellfish.VirtualOS, agentName string) {
+func listCreatedFiles(v *grasp.VirtualOS, agentName string) {
 	sh := v.Shell("system")
 	ctx := context.Background()
 
@@ -409,7 +409,7 @@ func newClient() anthropic.Client {
 func shellToolDef() anthropic.ToolParam {
 	return anthropic.ToolParam{
 		Name:        "shell",
-		Description: anthropic.String("Execute a command in the Shellfish virtual filesystem. Commands: ls, cat, grep, find, head, tail, stat, write, mkdir, rm, mv, cp, echo, cd, pwd. Supports pipes (|), redirects (>, >>), here-documents (<< 'EOF'), env vars ($VAR)."),
+		Description: anthropic.String("Execute a command in the grasp virtual filesystem. Commands: ls, cat, grep, find, head, tail, stat, write, mkdir, rm, mv, cp, echo, cd, pwd. Supports pipes (|), redirects (>, >>), here-documents (<< 'EOF'), env vars ($VAR)."),
 		InputSchema: anthropic.ToolInputSchemaParam{
 			Type: constant.ValueOf[constant.Object](),
 			Properties: map[string]interface{}{

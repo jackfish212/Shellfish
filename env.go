@@ -1,9 +1,9 @@
-package shellfish
+package grasp
 
 import (
 	"context"
 
-	"github.com/jackfish212/shellfish/shell"
+	"github.com/jackfish212/grasp/shell"
 )
 
 type envKey struct{}

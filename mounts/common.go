@@ -1,4 +1,4 @@
-// Package mounts provides built-in Mount implementations for shellfish.
+// Package mounts provides built-in Mount implementations for grasp.
 package mounts
 
 import "strings"

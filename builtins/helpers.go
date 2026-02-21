@@ -3,7 +3,7 @@ package builtins
 import (
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
+	grasp "github.com/jackfish212/grasp"
 )
 
 func hasFlag(args []string, flags ...string) bool {
@@ -21,13 +21,13 @@ func hasFlag(args []string, flags ...string) bool {
 
 func resolvePath(cwd, p string) string {
 	if strings.HasPrefix(p, "/") {
-		return shellfish.CleanPath(p)
+		return grasp.CleanPath(p)
 	}
 	p = strings.TrimPrefix(p, "./")
 	if cwd == "" || cwd == "/" {
-		return shellfish.CleanPath("/" + p)
+		return grasp.CleanPath("/" + p)
 	}
-	return shellfish.CleanPath(cwd + "/" + p)
+	return grasp.CleanPath(cwd + "/" + p)
 }
 
 func parseLsFlags(args []string) (bool, bool, []string) {

@@ -1,4 +1,4 @@
-package shellfish
+package grasp
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jackfish212/shellfish/shell"
+	"github.com/jackfish212/grasp/shell"
 )
 
 // VirtualOS is the top-level orchestrator. It owns the mount table and

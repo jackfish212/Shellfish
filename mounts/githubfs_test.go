@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 func TestGitHubFS_Stat(t *testing.T) {
@@ -38,9 +38,9 @@ func TestGitHubFS_Stat(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		path     string
-		wantDir  bool
-		wantErr  bool
+		path    string
+		wantDir bool
+		wantErr bool
 	}{
 		{"/", true, false},
 		{"/repos", true, false},

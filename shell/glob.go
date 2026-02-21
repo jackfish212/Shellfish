@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 func hasGlobChars(s string) bool {

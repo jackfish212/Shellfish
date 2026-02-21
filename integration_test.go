@@ -1,4 +1,4 @@
-package shellfish_test
+package grasp_test
 
 import (
 	"context"
@@ -6,15 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/builtins"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/builtins"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func setupIntegration(t *testing.T) (*shellfish.VirtualOS, *shellfish.Shell) {
+func setupIntegration(t *testing.T) (*grasp.VirtualOS, *grasp.Shell) {
 	t.Helper()
-	v := shellfish.New()
-	rootFS, err := shellfish.Configure(v)
+	v := grasp.New()
+	rootFS, err := grasp.Configure(v)
 	if err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
@@ -22,8 +22,8 @@ func setupIntegration(t *testing.T) (*shellfish.VirtualOS, *shellfish.Shell) {
 
 	rootFS.AddDir("home/agent")
 	rootFS.AddDir("home/agent/memory")
-	rootFS.AddFile("home/agent/memory/facts.json", []byte(`{"name":"test-agent"}`), shellfish.PermRW)
-	rootFS.AddFile("home/agent/memory/daily/2026-02-20.md", []byte("# Today\n- worked on shellfish tests\n"), shellfish.PermRW)
+	rootFS.AddFile("home/agent/memory/facts.json", []byte(`{"name":"test-agent"}`), grasp.PermRW)
+	rootFS.AddFile("home/agent/memory/daily/2026-02-20.md", []byte("# Today\n- worked on grasp tests\n"), grasp.PermRW)
 
 	sh := v.Shell("agent")
 	return v, sh
@@ -163,9 +163,9 @@ func TestIntegrationEnvironmentVariables(t *testing.T) {
 	_, sh := setupIntegration(t)
 	ctx := context.Background()
 
-	sh.Env.Set("GREETING", "hello_shellfish")
+	sh.Env.Set("GREETING", "hello_grasp")
 	result := sh.Execute(ctx, "echo $GREETING")
-	if !strings.Contains(result.Output, "hello_shellfish") {
+	if !strings.Contains(result.Output, "hello_grasp") {
 		t.Errorf("env expansion: %q", result.Output)
 	}
 
@@ -178,7 +178,7 @@ func TestIntegrationEnvironmentVariables(t *testing.T) {
 func TestIntegrationMultiMountSearch(t *testing.T) {
 	v, sh := setupIntegration(t)
 
-	local := mounts.NewLocalFS(t.TempDir(), shellfish.PermRW)
+	local := mounts.NewLocalFS(t.TempDir(), grasp.PermRW)
 	v.Mount("/ext", local)
 
 	ctx := context.Background()

@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 // VirtualOS is the interface that shell needs from VirtualOS.

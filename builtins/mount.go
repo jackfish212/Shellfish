@@ -5,11 +5,11 @@ import (
 	"io"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/mounts"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/mounts"
 )
 
-func builtinMount(v *shellfish.VirtualOS) mounts.ExecFunc {
+func builtinMount(v *grasp.VirtualOS) mounts.ExecFunc {
 	return func(ctx context.Context, args []string, _ io.Reader) (io.ReadCloser, error) {
 		if hasFlag(args, "-h", "--help") {
 			return io.NopCloser(strings.NewReader("mount — list mount points\nUsage: mount\n")), nil
@@ -29,8 +29,8 @@ func builtinMount(v *shellfish.VirtualOS) mounts.ExecFunc {
 	}
 }
 
-func getMountInfo(p shellfish.Provider) (typ, extra string) {
-	if mip, ok := p.(shellfish.MountInfoProvider); ok {
+func getMountInfo(p grasp.Provider) (typ, extra string) {
+	if mip, ok := p.(grasp.MountInfoProvider); ok {
 		return mip.MountInfo()
 	}
 	return "unknown", "-"

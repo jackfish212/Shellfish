@@ -1,6 +1,6 @@
 # GitHub MCP Server Example (HTTP Transport)
 
-This example demonstrates connecting Shellfish to the official [GitHub MCP Server](https://github.com/github/github-mcp-server) using the Streamable HTTP transport (`HttpMCPClient`).
+This example demonstrates connecting grasp to the official [GitHub MCP Server](https://github.com/github/github-mcp-server) using the Streamable HTTP transport (`HttpMCPClient`).
 
 ## Prerequisites
 
@@ -37,7 +37,7 @@ go run . -v
 
 ```
 ┌─────────────────┐     HTTP POST     ┌───────────────────────┐
-│   Shellfish     │◄─────────────────►│  GitHub MCP Server    │
+│   grasp     │◄─────────────────►│  GitHub MCP Server    │
 │  VirtualOS      │   (JSON-RPC 2.0)  │  (Streamable HTTP)    │
 │                 │                   │                       │
 │  /github/tools/ │                   │  Tools: repos, issues │

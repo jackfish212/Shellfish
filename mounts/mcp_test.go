@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/jackfish212/shellfish/types"
+	"github.com/jackfish212/grasp/types"
 )
 
 // mockMCPClient implements MCPClient for testing
@@ -380,13 +380,13 @@ func TestParseCLIArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "missing required",
-			args: []string{"--verbose"},
+			name:    "missing required",
+			args:    []string{"--verbose"},
 			wantErr: true,
 		},
 		{
-			name: "missing value",
-			args: []string{"--name"},
+			name:    "missing value",
+			args:    []string{"--name"},
 			wantErr: true,
 		},
 	}

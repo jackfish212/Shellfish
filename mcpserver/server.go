@@ -9,26 +9,26 @@ import (
 	"log/slog"
 	"strings"
 
-	shellfish "github.com/jackfish212/shellfish"
-	"github.com/jackfish212/shellfish/shell"
+	grasp "github.com/jackfish212/grasp"
+	"github.com/jackfish212/grasp/shell"
 )
 
-// Server implements the MCP protocol over stdio, exposing a Shellfish VirtualOS
+// Server implements the MCP protocol over stdio, exposing a grasp VirtualOS
 // as a single "shell" tool. Shell state (cwd, env, history) persists across
 // tool calls within the same session.
 type Server struct {
-	vos   *shellfish.VirtualOS
+	vos   *grasp.VirtualOS
 	shell *shell.Shell
-	info  shellfish.VersionInfo
+	info  grasp.VersionInfo
 }
 
 // New creates an MCP server bound to the given VirtualOS.
 // The user parameter sets the shell's $USER and determines $HOME.
-func New(vos *shellfish.VirtualOS, user string) *Server {
+func New(vos *grasp.VirtualOS, user string) *Server {
 	return &Server{
 		vos:   vos,
 		shell: vos.Shell(user),
-		info:  shellfish.GetVersionInfo(),
+		info:  grasp.GetVersionInfo(),
 	}
 }
 
@@ -39,12 +39,12 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) error {
 	scanner.Buffer(make([]byte, 0, 64*1024), 10*1024*1024)
 	enc := json.NewEncoder(out)
 
-	slog.Info("shellfish-server started", "version", s.info.Version)
+	slog.Info("grasp-server started", "version", s.info.Version)
 
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
-			slog.Info("shellfish-server: context cancelled")
+			slog.Info("grasp-server: context cancelled")
 			return ctx.Err()
 		default:
 		}
@@ -81,7 +81,7 @@ func (s *Server) Run(ctx context.Context, in io.Reader, out io.Writer) error {
 		return fmt.Errorf("stdin read error: %w", err)
 	}
 
-	slog.Info("shellfish-server: stdin closed, shutting down")
+	slog.Info("grasp-server: stdin closed, shutting down")
 	return nil
 }
 
@@ -129,7 +129,7 @@ func (s *Server) handleInitialize(req *jsonRPCRequest) *jsonRPCResponse {
 		Result: initializeResult{
 			ProtocolVersion: protocolVersion,
 			Capabilities:    serverCapabilities{Tools: &toolsCapability{}},
-			ServerInfo:      serverInfo{Name: "shellfish", Version: s.info.Version},
+			ServerInfo:      serverInfo{Name: "grasp", Version: s.info.Version},
 		},
 	}
 }
@@ -208,7 +208,7 @@ func (s *Server) handleToolsCall(ctx context.Context, req *jsonRPCRequest) *json
 
 func (s *Server) buildToolDescription() string {
 	var b strings.Builder
-	b.WriteString("Execute a shell command in the Shellfish virtual filesystem. ")
+	b.WriteString("Execute a shell command in the grasp virtual filesystem. ")
 	b.WriteString("Commands: ls, cat, read, write, stat, grep, find, head, tail, mkdir, rm, mv, cp, mount, which, uname. ")
 	b.WriteString("Shell builtins: cd, pwd, echo, env, history. ")
 	b.WriteString("Features: pipes (|), redirects (>, >>), logical operators (&&, ||), here-documents (<<EOF), env vars ($VAR).")
