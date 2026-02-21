@@ -368,9 +368,15 @@ func TestShellGlobWithDir(t *testing.T) {
 	sh, v := setupShell(t)
 	ctx := context.Background()
 
-	v.Write(ctx, "/tmp/x.go", strings.NewReader(""))
-	v.Write(ctx, "/tmp/y.go", strings.NewReader(""))
-	v.Write(ctx, "/tmp/z.md", strings.NewReader(""))
+	if err := v.Write(ctx, "/tmp/x.go", strings.NewReader("")); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Write(ctx, "/tmp/y.go", strings.NewReader("")); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Write(ctx, "/tmp/z.md", strings.NewReader("")); err != nil {
+		t.Fatal(err)
+	}
 
 	result := sh.Execute(ctx, "echo /tmp/*.go")
 	got := strings.TrimSpace(result.Output)

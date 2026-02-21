@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/jackfish212/grasp/types"
@@ -29,7 +28,6 @@ type SQLiteFS struct {
 	db     *sql.DB
 	dbPath string
 	perm   types.Perm
-	mu     sync.RWMutex
 }
 
 func NewSQLiteFS(dbPath string, perm types.Perm) (*SQLiteFS, error) {

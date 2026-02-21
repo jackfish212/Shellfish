@@ -6,8 +6,6 @@ import (
 	"github.com/jackfish212/grasp/shell"
 )
 
-type envKey struct{}
-
 // WithEnv returns a context carrying the given environment variables.
 func WithEnv(ctx context.Context, env map[string]string) context.Context {
 	return shell.WithEnv(ctx, env)
