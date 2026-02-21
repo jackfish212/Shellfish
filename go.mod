@@ -5,7 +5,10 @@ go 1.24.3
 require (
 	github.com/anthropics/anthropic-sdk-go v1.26.0
 	github.com/joho/godotenv v1.5.1
+	github.com/nlpodyssey/openai-agents-go v0.1.0
+	github.com/openai/openai-go/v2 v2.5.0
 	github.com/rwtodd/Go.Sed v0.0.0-20250326002959-ba712dc84b62
+	github.com/thedevsaddam/gojsonq/v2 v2.5.2
 	modernc.org/sqlite v1.45.0
 )
 
@@ -29,10 +32,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.32 // indirect
 	github.com/modelcontextprotocol/go-sdk v0.5.0 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
-	github.com/nlpodyssey/openai-agents-go v0.1.0 // indirect
-	github.com/openai/openai-go/v2 v2.5.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/thedevsaddam/gojsonq/v2 v2.5.2 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
