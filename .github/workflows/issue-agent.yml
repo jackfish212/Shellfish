@@ -1,0 +1,183 @@
+# Issue Agent Workflow
+#
+# This workflow automatically generates code changes when a GitHub issue is created
+# or labeled with 'ai-generate'. It uses:
+# - grasp virtual filesystem for file operations
+# - Anthropic Claude for AI-powered code generation
+# - GitHub MCP Server (optional) for enhanced GitHub integration
+#
+# Setup:
+# 1. Add ANTHROPIC_API_KEY to your repository secrets
+# 2. Create an issue with a clear description of what needs to be changed
+# 3. Add the 'ai-generate' label to trigger the workflow (or it auto-runs on new issues)
+#
+# The workflow will:
+# 1. Read the issue content
+# 2. Use AI to understand and implement the required changes
+# 3. Create a new branch with the changes
+# 4. Open a pull request for review
+
+name: Issue Agent
+
+on:
+  issues:
+    types: [opened, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  # Default branch for PRs (can be overridden)
+  DEFAULT_BRANCH: main
+
+jobs:
+  code-generator:
+    name: AI Code Generator
+    # Run on new issues or when 'ai-generate' label is added
+    if: |
+      github.event.action == 'opened' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'ai-generate')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.3'
+          cache: true
+
+      - name: Get Issue Info
+        id: issue
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body || '' }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          echo "title<<EOF" >> $GITHUB_OUTPUT
+          echo "${ISSUE_TITLE}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "number=${ISSUE_NUMBER}" >> $GITHUB_OUTPUT
+          # Save issue body to file for multiline content
+          printf '%s' "${ISSUE_BODY}" > /tmp/issue_body.txt
+
+      - name: Add comment - Starting
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ steps.issue.outputs.number }} --body "🤖 AI Code Generator is analyzing this issue and will create a PR shortly..."
+
+      - name: Build issue-codegen
+        run: |
+          go build -o issue-codegen ./ci/issue-codegen
+
+      - name: Run AI Code Generation
+        id: codegen
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+          ISSUE_TITLE: ${{ steps.issue.outputs.title }}
+        run: |
+          # Read issue body (handle empty body)
+          if [ -s /tmp/issue_body.txt ]; then
+            ISSUE_BODY=$(cat /tmp/issue_body.txt)
+          else
+            ISSUE_BODY="No description provided."
+          fi
+
+          # Run the code generator
+          ./issue-codegen \
+            -repo "${GITHUB_REPOSITORY}" \
+            -issue "${ISSUE_NUMBER}" \
+            -title "${ISSUE_TITLE}" \
+            -body "${ISSUE_BODY}" \
+            -workdir "${GITHUB_WORKSPACE}" \
+            -v
+
+          # Check if changes were made
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.codegen.outputs.has_changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH_NAME="ai-fix-issue-${{ steps.issue.outputs.number }}"
+          ISSUE_TITLE="${{ steps.issue.outputs.title }}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create branch and commit
+          git checkout -b "${BRANCH_NAME}"
+          git add -A
+
+          # Create commit message
+          git commit -m "fix: implement solution for issue #${{ steps.issue.outputs.number }}
+
+${ISSUE_TITLE}
+
+Closes #${{ steps.issue.outputs.number }}
+
+Co-Authored-By: AI Agent <ai-agent@grasp>"
+
+          # Push branch
+          git push -u origin "${BRANCH_NAME}"
+
+          # Create PR
+          gh pr create \
+            --title "Fix #${{ steps.issue.outputs.number }}: ${ISSUE_TITLE}" \
+            --body "$(cat <<'PRBODY'
+## Summary
+This PR was automatically generated to address issue #${{ steps.issue.outputs.number }}.
+
+### Original Issue
+**Title:** ${ISSUE_TITLE}
+
+### Changes Made
+The AI agent analyzed the issue and implemented the necessary changes.
+
+### Test Plan
+- [ ] Review the generated code
+- [ ] Run tests to verify the changes
+- [ ] Check for any unintended side effects
+
+### How to Test
+\`\`\`bash
+go test ./...
+go build ./...
+\`\`\`
+
+---
+*This PR was generated by the [Issue Agent](./.github/workflows/issue-agent.yml) workflow using grasp + Anthropic AI.*
+PRBODY
+)" \
+            --base "${{ env.DEFAULT_BRANCH }}"
+
+          # Add comment to issue
+          gh issue comment ${{ steps.issue.outputs.number }} --body "✅ Created PR for this issue. Please review the generated changes."
+
+      - name: No changes needed
+        if: steps.codegen.outputs.has_changes != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ steps.issue.outputs.number }} --body "🤖 The AI agent analyzed this issue but determined no code changes were needed, or the changes could not be automatically implemented. Please review the issue description and consider:
+- Adding more details to the issue
+- Breaking down the task into smaller, specific changes
+- Manually implementing the fix"
