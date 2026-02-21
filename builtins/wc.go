@@ -192,7 +192,7 @@ func countFile(v *grasp.VirtualOS, ctx context.Context, path string) (*wcCounts,
 	if err != nil {
 		return nil, fmt.Errorf("wc: %s: %w", path, err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	return countReader(reader), nil
 }

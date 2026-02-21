@@ -101,7 +101,7 @@ Options:
 			if err != nil {
 				return nil, fmt.Errorf("head: %w", err)
 			}
-			defer rc.Close()
+			defer func() { _ = rc.Close() }()
 
 			var content string
 			if bytes >= 0 {

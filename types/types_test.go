@@ -168,7 +168,7 @@ func TestNewExecutableFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Exec error: %v", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	data, _ := io.ReadAll(rc)
 	if string(data) != "executed: a,b" {
 		t.Errorf("Exec output = %q, want %q", string(data), "executed: a,b")

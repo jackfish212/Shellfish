@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	grasp "github.com/jackfish212/grasp"
@@ -56,12 +57,18 @@ Expressions:
 				case "-maxdepth":
 					if i+1 < len(args) {
 						i++
-						fmt.Sscanf(args[i], "%d", &opts.maxDepth)
+						depth, parseErr := strconv.Atoi(args[i])
+						if parseErr == nil {
+							opts.maxDepth = depth
+						}
 					}
 				case "-mindepth":
 					if i+1 < len(args) {
 						i++
-						fmt.Sscanf(args[i], "%d", &opts.minDepth)
+						depth, parseErr := strconv.Atoi(args[i])
+						if parseErr == nil {
+							opts.minDepth = depth
+						}
 					}
 				}
 			} else if !strings.HasPrefix(arg, "-") {
@@ -92,12 +99,18 @@ Expressions:
 			case "-maxdepth":
 				if i+1 < len(remainingArgs) {
 					i++
-					fmt.Sscanf(remainingArgs[i], "%d", &opts.maxDepth)
+					depth, parseErr := strconv.Atoi(remainingArgs[i])
+					if parseErr == nil {
+						opts.maxDepth = depth
+					}
 				}
 			case "-mindepth":
 				if i+1 < len(remainingArgs) {
 					i++
-					fmt.Sscanf(remainingArgs[i], "%d", &opts.minDepth)
+					depth, parseErr := strconv.Atoi(remainingArgs[i])
+					if parseErr == nil {
+						opts.minDepth = depth
+					}
 				}
 			}
 		}

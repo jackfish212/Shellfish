@@ -19,7 +19,9 @@ func setupTestServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
-	builtins.RegisterBuiltinsOnFS(v, rootFS)
+	if err := builtins.RegisterBuiltinsOnFS(v, rootFS); err != nil {
+		t.Fatalf("RegisterBuiltinsOnFS: %v", err)
+	}
 
 	mem := mounts.NewMemFS(grasp.PermRW)
 	mem.AddFile("hello.txt", []byte("Hello, grasp!\n"), grasp.PermRW)
@@ -82,7 +84,9 @@ func TestInitialize(t *testing.T) {
 
 	b, _ := json.Marshal(resp.Result)
 	var result initializeResult
-	json.Unmarshal(b, &result)
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatalf("unmarshal initialize result: %v", err)
+	}
 
 	if result.ProtocolVersion != protocolVersion {
 		t.Errorf("protocolVersion = %q, want %q", result.ProtocolVersion, protocolVersion)
@@ -105,7 +109,9 @@ func TestToolsList(t *testing.T) {
 
 	b, _ := json.Marshal(resp.Result)
 	var result toolsListResult
-	json.Unmarshal(b, &result)
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatalf("unmarshal tools list result: %v", err)
+	}
 
 	if len(result.Tools) != 1 {
 		t.Fatalf("expected 1 tool, got %d", len(result.Tools))
@@ -136,7 +142,9 @@ func TestToolsCallLs(t *testing.T) {
 
 	b, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(b, &result)
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
 
 	if len(result.Content) == 0 {
 		t.Fatal("expected content blocks")
@@ -163,7 +171,9 @@ func TestToolsCallCat(t *testing.T) {
 
 	b, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(b, &result)
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
 
 	if result.Content[0].Text != "Hello, grasp!\n" {
 		t.Errorf("cat output = %q, want %q", result.Content[0].Text, "Hello, grasp!\n")
@@ -183,7 +193,9 @@ func TestToolsCallPipe(t *testing.T) {
 
 	b, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(b, &result)
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
 
 	if !strings.Contains(result.Content[0].Text, "hello world") {
 		t.Errorf("pipe output should contain 'hello world', got: %s", result.Content[0].Text)
@@ -236,7 +248,9 @@ func TestToolsCallCdPersistsState(t *testing.T) {
 
 	b, _ := json.Marshal(pwdResp.Result)
 	var result toolsCallResult
-	json.Unmarshal(b, &result)
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
 
 	if !strings.Contains(result.Content[0].Text, "/data") {
 		t.Errorf("after cd /data, pwd should show /data, got: %s", result.Content[0].Text)
@@ -271,7 +285,9 @@ func TestToolsCallEmptyCommand(t *testing.T) {
 
 	b, _ := json.Marshal(resp.Result)
 	var result toolsCallResult
-	json.Unmarshal(b, &result)
+	if err := json.Unmarshal(b, &result); err != nil {
+		t.Fatalf("unmarshal result: %v", err)
+	}
 
 	if !result.IsError {
 		t.Error("expected isError=true for empty command")

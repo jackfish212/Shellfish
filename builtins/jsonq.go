@@ -59,9 +59,12 @@ func builtinJsonq(v *grasp.VirtualOS) mounts.ExecFunc {
 			}
 
 			output, err := executeQuery(reader, queryPath, opts)
-			reader.Close()
+			closeErr := reader.Close()
 			if err != nil {
 				return nil, fmt.Errorf("jsonq: %s: %w", file, err)
+			}
+			if closeErr != nil {
+				return nil, fmt.Errorf("jsonq: %s: %w", file, closeErr)
 			}
 
 			if len(files) > 1 {

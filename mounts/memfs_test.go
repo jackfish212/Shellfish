@@ -30,7 +30,7 @@ func TestMemFSAddFileAndOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "hello world" {
 		t.Errorf("content = %q, want %q", string(data), "hello world")
@@ -113,7 +113,7 @@ func TestMemFSWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open after Write: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "new content" {
 		t.Errorf("content = %q, want %q", string(data), "new content")
@@ -128,7 +128,7 @@ func TestMemFSWriteOverwrite(t *testing.T) {
 	_ = fs.Write(ctx, "file.txt", strings.NewReader("v2"))
 
 	f, _ := fs.Open(ctx, "file.txt")
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "v2" {
 		t.Errorf("overwritten content = %q, want %q", string(data), "v2")
@@ -169,7 +169,7 @@ func TestMemFSExecFunc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Exec: %v", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	data, _ := io.ReadAll(rc)
 	if string(data) != "hello Alice" {
 		t.Errorf("Exec output = %q, want %q", string(data), "hello Alice")
@@ -187,7 +187,7 @@ func TestMemFSAddFunc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Exec old func: %v", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	data, _ := io.ReadAll(rc)
 	if string(data) != "legacy:input" {
 		t.Errorf("output = %q, want %q", string(data), "legacy:input")
@@ -205,7 +205,7 @@ func TestMemFSOpenExecutableReturnHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open tool: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "A tool") {
 		t.Errorf("opening executable should return help, got: %q", string(data))

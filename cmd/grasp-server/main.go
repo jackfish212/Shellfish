@@ -54,7 +54,7 @@ func main() {
 
 	if *showVersion {
 		info := grasp.GetVersionInfo()
-		fmt.Fprintf(os.Stdout, "grasp-server %s (%s, %s)\n", info.Version, info.GoVersion, info.Platform)
+		_, _ = fmt.Fprintf(os.Stdout, "grasp-server %s (%s, %s)\n", info.Version, info.GoVersion, info.Platform)
 		os.Exit(0)
 	}
 
@@ -70,7 +70,10 @@ func main() {
 		slog.Error("failed to configure VirtualOS", "error", err)
 		os.Exit(1)
 	}
-	builtins.RegisterBuiltinsOnFS(v, rootFS)
+	if err := builtins.RegisterBuiltinsOnFS(v, rootFS); err != nil {
+		slog.Error("failed to register builtins", "error", err)
+		os.Exit(1)
+	}
 
 	for _, spec := range mntFlags {
 		if err := mountFromSpec(v, spec); err != nil {

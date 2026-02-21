@@ -115,7 +115,9 @@ func (s *Server) dispatch(ctx context.Context, req *jsonRPCRequest) *jsonRPCResp
 func (s *Server) handleInitialize(req *jsonRPCRequest) *jsonRPCResponse {
 	var params initializeParams
 	if req.Params != nil {
-		json.Unmarshal(req.Params, &params)
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			slog.Debug("failed to unmarshal initialize params", "error", err)
+		}
 	}
 	slog.Info("client connected",
 		"client", params.ClientInfo.Name,

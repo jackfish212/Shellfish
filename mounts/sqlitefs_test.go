@@ -23,7 +23,7 @@ func setupSQLiteFS(t *testing.T) *SQLiteFS {
 	if err != nil {
 		t.Fatalf("NewSQLiteFS: %v", err)
 	}
-	t.Cleanup(func() { fs.Close() })
+	t.Cleanup(func() { _ = fs.Close() })
 	return fs
 }
 
@@ -40,7 +40,7 @@ func TestSQLiteFSWriteAndOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "hello sqlite" {
 		t.Errorf("content = %q, want %q", string(data), "hello sqlite")
@@ -145,8 +145,12 @@ func TestSQLiteFSListSubdir(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "dir/file1.txt", strings.NewReader("1"))
-	fs.Write(ctx, "dir/file2.txt", strings.NewReader("2"))
+	if err := fs.Write(ctx, "dir/file1.txt", strings.NewReader("1")); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Write(ctx, "dir/file2.txt", strings.NewReader("2")); err != nil {
+		t.Fatal(err)
+	}
 
 	entries, err := fs.List(ctx, "dir", types.ListOpts{})
 	if err != nil {
@@ -171,11 +175,15 @@ func TestSQLiteFSOverwrite(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "file.txt", strings.NewReader("v1"))
-	fs.Write(ctx, "file.txt", strings.NewReader("v2"))
+	if err := fs.Write(ctx, "file.txt", strings.NewReader("v1")); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Write(ctx, "file.txt", strings.NewReader("v2")); err != nil {
+		t.Fatal(err)
+	}
 
 	f, _ := fs.Open(ctx, "file.txt")
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "v2" {
 		t.Errorf("overwrite = %q, want v2", string(data))
@@ -188,7 +196,7 @@ func TestSQLiteFSWriteReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSQLiteFS: %v", err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 
 	ctx := context.Background()
 	err = fs.Write(ctx, "file.txt", strings.NewReader("data"))
@@ -219,7 +227,9 @@ func TestSQLiteFSRemove(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "removeme.txt", strings.NewReader("bye"))
+	if err := fs.Write(ctx, "removeme.txt", strings.NewReader("bye")); err != nil {
+		t.Fatal(err)
+	}
 	err := fs.Remove(ctx, "removeme.txt")
 	if err != nil {
 		t.Fatalf("Remove: %v", err)
@@ -267,7 +277,9 @@ func TestSQLiteFSRename(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "old.txt", strings.NewReader("content"))
+	if err := fs.Write(ctx, "old.txt", strings.NewReader("content")); err != nil {
+		t.Fatal(err)
+	}
 	err := fs.Rename(ctx, "old.txt", "new.txt")
 	if err != nil {
 		t.Fatalf("Rename: %v", err)
@@ -282,7 +294,7 @@ func TestSQLiteFSRename(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open new.txt: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "content" {
 		t.Errorf("renamed content = %q", string(data))
@@ -311,19 +323,19 @@ func TestSQLiteFSPersistence(t *testing.T) {
 	if err := fs1.Write(ctx, "persistent.txt", strings.NewReader("survive restart")); err != nil {
 		t.Fatal(err)
 	}
-	fs1.Close()
+	_ = fs1.Close()
 
 	fs2, err := NewSQLiteFS(dbPath, types.PermRW)
 	if err != nil {
 		t.Fatalf("NewSQLiteFS reopen: %v", err)
 	}
-	defer fs2.Close()
+	defer func() { _ = fs2.Close() }()
 
 	f, err := fs2.Open(ctx, "persistent.txt")
 	if err != nil {
 		t.Fatalf("Open after reopen: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "survive restart" {
 		t.Errorf("persisted content = %q", string(data))
@@ -334,7 +346,7 @@ func TestSQLiteFSMountInfo(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "info.db")
 	fs, _ := NewSQLiteFS(dbPath, types.PermRW)
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 
 	name, extra := fs.MountInfo()
 	if name != "sqlitefs" {
@@ -356,19 +368,25 @@ func TestSQLiteFSVersion(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "f.txt", strings.NewReader("v1"))
+	if err := fs.Write(ctx, "f.txt", strings.NewReader("v1")); err != nil {
+		t.Fatal(err)
+	}
 	e1, _ := fs.Stat(ctx, "f.txt")
 	if e1.Meta["version"] != "1" {
 		t.Errorf("version after first write = %q, want 1", e1.Meta["version"])
 	}
 
-	fs.Write(ctx, "f.txt", strings.NewReader("v2"))
+	if err := fs.Write(ctx, "f.txt", strings.NewReader("v2")); err != nil {
+		t.Fatal(err)
+	}
 	e2, _ := fs.Stat(ctx, "f.txt")
 	if e2.Meta["version"] != "2" {
 		t.Errorf("version after second write = %q, want 2", e2.Meta["version"])
 	}
 
-	fs.Write(ctx, "f.txt", strings.NewReader("v3"))
+	if err := fs.Write(ctx, "f.txt", strings.NewReader("v3")); err != nil {
+		t.Fatal(err)
+	}
 	e3, _ := fs.Stat(ctx, "f.txt")
 	if e3.Meta["version"] != "3" {
 		t.Errorf("version after third write = %q, want 3", e3.Meta["version"])
@@ -416,7 +434,9 @@ func TestSQLiteFSWriteMeta(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "f.txt", strings.NewReader("data"))
+	if err := fs.Write(ctx, "f.txt", strings.NewReader("data")); err != nil {
+		t.Fatal(err)
+	}
 
 	err := fs.WriteMeta(ctx, "f.txt", map[string]string{"key": "val"})
 	if err != nil {
@@ -449,7 +469,7 @@ func TestSQLiteFSMetaInOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	entry, _ := f.Stat()
 	if entry.Meta["kind"] != "rss" {
@@ -464,7 +484,9 @@ func TestSQLiteFSPurge(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "old.txt", strings.NewReader("old"))
+	if err := fs.Write(ctx, "old.txt", strings.NewReader("old")); err != nil {
+		t.Fatal(err)
+	}
 
 	// Backdate the file to 2 hours ago
 	_, err := fs.db.Exec(`UPDATE files SET modified = ? WHERE path = 'old.txt'`, time.Now().Add(-2*time.Hour).Unix())
@@ -472,7 +494,9 @@ func TestSQLiteFSPurge(t *testing.T) {
 		t.Fatalf("backdate: %v", err)
 	}
 
-	fs.Write(ctx, "new.txt", strings.NewReader("new"))
+	if err := fs.Write(ctx, "new.txt", strings.NewReader("new")); err != nil {
+		t.Fatal(err)
+	}
 
 	n, err := fs.Purge(ctx, 1*time.Hour)
 	if err != nil {
@@ -496,9 +520,15 @@ func TestSQLiteFSPurgeByPrefix(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "feed/a.txt", strings.NewReader("a"))
-	fs.Write(ctx, "feed/b.txt", strings.NewReader("b"))
-	fs.Write(ctx, "other/c.txt", strings.NewReader("c"))
+	if err := fs.Write(ctx, "feed/a.txt", strings.NewReader("a")); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Write(ctx, "feed/b.txt", strings.NewReader("b")); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Write(ctx, "other/c.txt", strings.NewReader("c")); err != nil {
+		t.Fatal(err)
+	}
 
 	n, err := fs.PurgeByPrefix(ctx, "feed")
 	if err != nil {
@@ -575,14 +605,14 @@ func TestSQLiteFSMigration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
-	db.Close()
+	_ = db.Close()
 
 	// Reopen via SQLiteFS — migration should add version column
 	fs, err := NewSQLiteFS(dbPath, types.PermRW)
 	if err != nil {
 		t.Fatalf("NewSQLiteFS after migration: %v", err)
 	}
-	defer fs.Close()
+	defer func() { _ = fs.Close() }()
 
 	entry, err := fs.Stat(context.Background(), "legacy.txt")
 	if err != nil {

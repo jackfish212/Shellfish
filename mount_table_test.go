@@ -84,8 +84,12 @@ func TestMountTableLongestPrefix(t *testing.T) {
 	pRoot := &stubProvider{}
 	pData := &stubProvider{}
 
-	mt.Mount("/", pRoot)
-	mt.Mount("/data", pData)
+	if err := mt.Mount("/", pRoot); err != nil {
+		t.Fatal(err)
+	}
+	if err := mt.Mount("/data", pData); err != nil {
+		t.Fatal(err)
+	}
 
 	got, _, _ := mt.Resolve("/data/file")
 	if got != pData {
@@ -101,7 +105,9 @@ func TestMountTableLongestPrefix(t *testing.T) {
 func TestMountTableDuplicate(t *testing.T) {
 	mt := NewMountTable()
 	p := &stubProvider{}
-	mt.Mount("/data", p)
+	if err := mt.Mount("/data", p); err != nil {
+		t.Fatal(err)
+	}
 
 	err := mt.Mount("/data", p)
 	if !errors.Is(err, ErrAlreadyMounted) {
@@ -112,7 +118,9 @@ func TestMountTableDuplicate(t *testing.T) {
 func TestMountTableUnmount(t *testing.T) {
 	mt := NewMountTable()
 	p := &stubProvider{}
-	mt.Mount("/data", p)
+	if err := mt.Mount("/data", p); err != nil {
+		t.Fatal(err)
+	}
 
 	if err := mt.Unmount("/data"); err != nil {
 		t.Fatalf("Unmount /data: %v", err)
@@ -134,9 +142,15 @@ func TestMountTableUnmountNotFound(t *testing.T) {
 
 func TestMountTableChildMounts(t *testing.T) {
 	mt := NewMountTable()
-	mt.Mount("/data", &stubProvider{})
-	mt.Mount("/tools", &stubProvider{})
-	mt.Mount("/data/sub", &stubProvider{})
+	if err := mt.Mount("/data", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := mt.Mount("/tools", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := mt.Mount("/data/sub", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
 
 	children := mt.ChildMounts("/")
 	names := make(map[string]bool)
@@ -155,8 +169,12 @@ func TestMountTableChildMounts(t *testing.T) {
 
 func TestMountTableAll(t *testing.T) {
 	mt := NewMountTable()
-	mt.Mount("/a", &stubProvider{})
-	mt.Mount("/b", &stubProvider{})
+	if err := mt.Mount("/a", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := mt.Mount("/b", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
 
 	paths := mt.All()
 	if len(paths) != 2 {
@@ -166,7 +184,9 @@ func TestMountTableAll(t *testing.T) {
 
 func TestMountTableAllInfo(t *testing.T) {
 	mt := NewMountTable()
-	mt.Mount("/data", &stubProvider{})
+	if err := mt.Mount("/data", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
 
 	infos := mt.AllInfo()
 	if len(infos) != 1 {
@@ -183,9 +203,14 @@ func TestMountTableAllInfo(t *testing.T) {
 func TestMountTableResolveCache(t *testing.T) {
 	mt := NewMountTable()
 	p := &stubProvider{}
-	mt.Mount("/data", p)
+	if err := mt.Mount("/data", p); err != nil {
+		t.Fatal(err)
+	}
 
-	mt.Resolve("/data/file")
+	_, _, err := mt.Resolve("/data/file")
+	if err != nil {
+		t.Fatal(err)
+	}
 	got, inner, err := mt.Resolve("/data/file")
 	if err != nil {
 		t.Fatalf("cached resolve failed: %v", err)
@@ -194,7 +219,9 @@ func TestMountTableResolveCache(t *testing.T) {
 		t.Error("cached resolve returned wrong result")
 	}
 
-	mt.Unmount("/data")
+	if err := mt.Unmount("/data"); err != nil {
+		t.Fatal(err)
+	}
 	_, _, err = mt.Resolve("/data/file")
 	if err == nil {
 		t.Error("cache should be invalidated after unmount")

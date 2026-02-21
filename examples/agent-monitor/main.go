@@ -45,7 +45,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("configure: %v", err)
 	}
-	builtins.RegisterBuiltinsOnFS(v, rootFS)
+	if err := builtins.RegisterBuiltinsOnFS(v, rootFS); err != nil {
+		log.Fatalf("register builtins: %v", err)
+	}
 
 	workspace := mounts.NewMemFS(grasp.PermRW)
 	if err := v.Mount("/workspace", workspace); err != nil {
@@ -157,7 +159,7 @@ func (m *agentMonitor) stop() {
 		m.cancel()
 	}
 	if m.watcher != nil {
-		m.watcher.Close()
+		_ = m.watcher.Close()
 	}
 	m.wg.Wait()
 }
@@ -235,7 +237,10 @@ Keep your responses brief — the user is in the middle of working.`
 			case anthropic.ToolUseBlock:
 				hasToolUse = true
 				var input struct{ Command string }
-				json.Unmarshal([]byte(b.JSON.Input.Raw()), &input)
+				if err := json.Unmarshal([]byte(b.JSON.Input.Raw()), &input); err != nil {
+					log.Printf("unmarshal tool input: %v", err)
+					continue
+				}
 				output := executeInAgentShell(m.v, input.Command)
 				toolResults = append(toolResults, anthropic.NewToolResultBlock(b.ID, output, false))
 			}

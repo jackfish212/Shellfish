@@ -131,7 +131,7 @@ func (s *Shell) executeSingle(ctx context.Context, cmdLine string, stdin io.Read
 		if execErr != nil {
 			return &ExecResult{Output: fmt.Sprintf("ls: %v\n", execErr), Code: 1}
 		}
-		defer rc.Close()
+		defer func() { _ = rc.Close() }()
 		var buf bytes.Buffer
 		_, _ = io.Copy(&buf, rc)
 		output := buf.String()
@@ -150,7 +150,7 @@ func (s *Shell) executeSingle(ctx context.Context, cmdLine string, stdin io.Read
 		}
 		return &ExecResult{Output: errMsg, Code: 1}
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	var buf bytes.Buffer
 	_, _ = io.Copy(&buf, rc)
 	output := buf.String()

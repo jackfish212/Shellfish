@@ -37,7 +37,7 @@ func (s *Shell) loadProfileFile(ctx context.Context, path string) {
 		slog.Debug("shell: failed to open profile file", "path", path, "error", err)
 		return
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	data, err := io.ReadAll(rc)
 	if err != nil {

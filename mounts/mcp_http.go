@@ -101,7 +101,7 @@ func (c *HttpMCPClient) call(ctx context.Context, method string, params any) (*j
 	if err != nil {
 		return nil, fmt.Errorf("http request: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if sid := httpResp.Header.Get("Mcp-Session-Id"); sid != "" {
 		c.sessionID = sid
@@ -170,7 +170,7 @@ func (c *HttpMCPClient) notify(ctx context.Context, method string) {
 	}
 	resp, err := c.httpClient.Do(httpReq)
 	if err == nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 }
 

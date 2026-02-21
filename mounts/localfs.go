@@ -89,7 +89,7 @@ func (fs *LocalFS) Open(_ context.Context, path string) (types.File, error) {
 	}
 	info, err := f.Stat()
 	if err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, err
 	}
 	entry := fs.infoToEntry(path, info)
@@ -108,7 +108,7 @@ func (fs *LocalFS) Write(_ context.Context, path string, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, err = io.Copy(f, r)
 	return err
 }

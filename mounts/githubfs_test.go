@@ -142,7 +142,7 @@ func TestGitHubFS_Open(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open(issue) error = %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	buf := make([]byte, 1024)
 	n, err := file.Read(buf)

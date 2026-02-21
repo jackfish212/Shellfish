@@ -25,7 +25,7 @@ func (s *Shell) loadHistory() {
 	if err != nil {
 		return
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	data, err := io.ReadAll(rc)
 	if err != nil {
@@ -59,7 +59,7 @@ func (s *Shell) saveHistory() {
 	rc, err := s.vos.Open(ctx, histFile)
 	if err == nil {
 		data, _ := io.ReadAll(rc)
-		rc.Close()
+		_ = rc.Close()
 		existing = string(data)
 	}
 

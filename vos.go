@@ -388,7 +388,7 @@ func (v *VirtualOS) Touch(ctx context.Context, path string) error {
 			f, openErr := r.Open(ctx, inner)
 			if openErr == nil {
 				data, _ := io.ReadAll(f)
-				f.Close()
+				_ = f.Close()
 				if err := w.Write(ctx, inner, bytes.NewReader(data)); err != nil {
 					return err
 				}

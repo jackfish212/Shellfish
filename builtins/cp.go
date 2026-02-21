@@ -97,7 +97,7 @@ func copyFile(ctx context.Context, v *grasp.VirtualOS, src, dst string, out *str
 	if err != nil {
 		return fmt.Errorf("cp: cannot open %q: %w", src, err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	// Write to destination
 	if err := v.Write(ctx, dst, rc); err != nil {

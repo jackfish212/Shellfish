@@ -57,7 +57,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Configure: %v", err)
 	}
-	builtins.RegisterBuiltinsOnFS(v, rootFS)
+	if err := builtins.RegisterBuiltinsOnFS(v, rootFS); err != nil {
+		log.Fatalf("RegisterBuiltinsOnFS: %v", err)
+	}
 
 	if err := v.Mount("/project", mounts.NewMemFS(grasp.PermRW)); err != nil {
 		log.Fatalf("mount /project: %v", err)
@@ -67,7 +69,9 @@ func main() {
 	}
 
 	outputDir := filepath.Join(".", "output")
-	os.MkdirAll(outputDir, 0o755)
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		log.Fatalf("mkdir output: %v", err)
+	}
 	if err := v.Mount("/output", mounts.NewLocalFS(outputDir, grasp.PermRW)); err != nil {
 		log.Fatalf("mount /output: %v", err)
 	}
@@ -220,7 +224,10 @@ func runAgent(ctx context.Context, v *grasp.VirtualOS, agent Agent, client anthr
 				var input struct {
 					Command string `json:"command"`
 				}
-				json.Unmarshal([]byte(b.JSON.Input.Raw()), &input)
+				if err := json.Unmarshal([]byte(b.JSON.Input.Raw()), &input); err != nil {
+					log.Printf("unmarshal tool input: %v", err)
+					continue
+				}
 
 				if verbose {
 					fmt.Printf("  $ %s\n", input.Command)
@@ -257,7 +264,7 @@ func runAgent(ctx context.Context, v *grasp.VirtualOS, agent Agent, client anthr
 func seedProject(v *grasp.VirtualOS) {
 	ctx := context.Background()
 
-	v.Write(ctx, "/project/README.md", strings.NewReader(`# BookStore API
+	_ = v.Write(ctx, "/project/README.md", strings.NewReader(`# BookStore API
 
 A REST API for managing a book catalog.
 
@@ -278,9 +285,9 @@ A REST API for managing a book catalog.
 - [ ] Write unit and integration tests
 `))
 
-	v.Write(ctx, "/project/go.mod", strings.NewReader("module github.com/example/bookstore\n\ngo 1.22\n"))
+	_ = v.Write(ctx, "/project/go.mod", strings.NewReader("module github.com/example/bookstore\n\ngo 1.22\n"))
 
-	v.Write(ctx, "/project/main.go", strings.NewReader(`package main
+	_ = v.Write(ctx, "/project/main.go", strings.NewReader(`package main
 
 import (
 	"fmt"

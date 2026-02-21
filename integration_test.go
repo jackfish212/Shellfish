@@ -18,7 +18,9 @@ func setupIntegration(t *testing.T) (*grasp.VirtualOS, *grasp.Shell) {
 	if err != nil {
 		t.Fatalf("Configure: %v", err)
 	}
-	builtins.RegisterBuiltinsOnFS(v, rootFS)
+	if err := builtins.RegisterBuiltinsOnFS(v, rootFS); err != nil {
+		t.Fatalf("RegisterBuiltinsOnFS: %v", err)
+	}
 
 	rootFS.AddDir("home/agent")
 	rootFS.AddDir("home/agent/memory")
@@ -73,7 +75,9 @@ func TestIntegrationPipelineChain(t *testing.T) {
 	v, sh := setupIntegration(t)
 	ctx := context.Background()
 
-	v.Write(ctx, "/home/agent/lines.txt", strings.NewReader("alpha\nbeta\ngamma\ndelta\nepsilon\n"))
+	if err := v.Write(ctx, "/home/agent/lines.txt", strings.NewReader("alpha\nbeta\ngamma\ndelta\nepsilon\n")); err != nil {
+		t.Fatal(err)
+	}
 
 	result := sh.Execute(ctx, "cat ~/lines.txt | head -n 3 | tail -n 1")
 	got := strings.TrimSpace(result.Output)
@@ -94,7 +98,7 @@ func TestIntegrationRedirectionChain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	content := string(data)
 	if !strings.Contains(content, "first") || !strings.Contains(content, "second") || !strings.Contains(content, "third") {
@@ -132,7 +136,7 @@ func TestIntegrationCommandGroupWithRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	content := string(data)
 	if !strings.Contains(content, "header") || !strings.Contains(content, "test-agent") {
@@ -151,7 +155,7 @@ func TestIntegrationHereDoc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open heredoc.txt: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	content := string(data)
 	if !strings.Contains(content, "line one") || !strings.Contains(content, "line three") {
@@ -179,10 +183,14 @@ func TestIntegrationMultiMountSearch(t *testing.T) {
 	v, sh := setupIntegration(t)
 
 	local := mounts.NewLocalFS(t.TempDir(), grasp.PermRW)
-	v.Mount("/ext", local)
+	if err := v.Mount("/ext", local); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
-	v.Write(ctx, "/ext/report.txt", strings.NewReader("quarterly report"))
+	if err := v.Write(ctx, "/ext/report.txt", strings.NewReader("quarterly report")); err != nil {
+		t.Fatal(err)
+	}
 
 	result := sh.Execute(ctx, "search report --scope /ext")
 	_ = result

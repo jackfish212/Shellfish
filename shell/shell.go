@@ -250,7 +250,7 @@ func (s *Shell) execute(ctx context.Context, cmdLine string) *ExecResult {
 	var closers []io.Closer
 	defer func() {
 		for _, c := range closers {
-			c.Close()
+			_ = c.Close()
 		}
 	}()
 

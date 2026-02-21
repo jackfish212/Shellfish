@@ -39,7 +39,7 @@ func NewSQLiteFS(dbPath string, perm types.Perm) (*SQLiteFS, error) {
 	}
 	fs := &SQLiteFS{db: db, dbPath: dbPath, perm: perm}
 	if err := fs.initDB(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("initializing database: %w", err)
 	}
 	return fs, nil
@@ -150,7 +150,7 @@ func (fs *SQLiteFS) List(_ context.Context, path string, _ types.ListOpts) ([]ty
 	if err != nil {
 		return nil, fmt.Errorf("list error: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	seen := make(map[string]bool)
 	var entries []types.Entry

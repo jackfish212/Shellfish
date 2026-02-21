@@ -38,7 +38,7 @@ func builtinSed(v *grasp.VirtualOS) func(ctx context.Context, args []string, std
 			if err != nil {
 				return nil, fmt.Errorf("sed: can't read %s: %w", opts.file, err)
 			}
-			defer reader.Close()
+			defer func() { _ = reader.Close() }()
 			content, err := io.ReadAll(reader)
 			if err != nil {
 				return nil, fmt.Errorf("sed: can't read %s: %w", opts.file, err)
@@ -95,9 +95,12 @@ func builtinSed(v *grasp.VirtualOS) func(ctx context.Context, args []string, std
 					return nil, fmt.Errorf("sed: can't read %s: %w", file, err)
 				}
 				content, err := io.ReadAll(reader)
-				reader.Close()
+				closeErr := reader.Close()
 				if err != nil {
 					return nil, fmt.Errorf("sed: can't read %s: %w", file, err)
+				}
+				if closeErr != nil {
+					return nil, fmt.Errorf("sed: close %s: %w", file, closeErr)
 				}
 
 				output, err := engine.RunString(string(content))
@@ -129,9 +132,12 @@ func sedInPlace(v *grasp.VirtualOS, engine *sed.Engine, files []string, ctx cont
 			return nil, fmt.Errorf("sed: can't read %s: %w", file, err)
 		}
 		content, err := io.ReadAll(reader)
-		reader.Close()
+		closeErr := reader.Close()
 		if err != nil {
 			return nil, fmt.Errorf("sed: can't read %s: %w", file, err)
+		}
+		if closeErr != nil {
+			return nil, fmt.Errorf("sed: close %s: %w", file, closeErr)
 		}
 
 		// Process with sed

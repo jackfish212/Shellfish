@@ -169,21 +169,27 @@ Options:
 		case "-C", "--context":
 			if i+1 < len(args) {
 				i++
-				fmt.Sscanf(args[i], "%d", &opts.context)
+				if _, err := fmt.Sscanf(args[i], "%d", &opts.context); err != nil {
+					return "", nil, fmt.Errorf("grep: invalid context argument: %s", args[i])
+				}
 			} else {
 				return "", nil, fmt.Errorf("grep: option requires an argument: %s", args[i-1])
 			}
 		case "-B", "--before-context":
 			if i+1 < len(args) {
 				i++
-				fmt.Sscanf(args[i], "%d", &opts.before)
+				if _, err := fmt.Sscanf(args[i], "%d", &opts.before); err != nil {
+					return "", nil, fmt.Errorf("grep: invalid before-context argument: %s", args[i])
+				}
 			} else {
 				return "", nil, fmt.Errorf("grep: option requires an argument: %s", args[i-1])
 			}
 		case "-A", "--after-context":
 			if i+1 < len(args) {
 				i++
-				fmt.Sscanf(args[i], "%d", &opts.after)
+				if _, err := fmt.Sscanf(args[i], "%d", &opts.after); err != nil {
+					return "", nil, fmt.Errorf("grep: invalid after-context argument: %s", args[i])
+				}
 			} else {
 				return "", nil, fmt.Errorf("grep: option requires an argument: %s", args[i-1])
 			}
@@ -213,7 +219,9 @@ Options:
 						if numStr == "" {
 							return "", nil, fmt.Errorf("grep: option requires a number: -B")
 						}
-						fmt.Sscanf(numStr, "%d", &opts.before)
+						if _, err := fmt.Sscanf(numStr, "%d", &opts.before); err != nil {
+							return "", nil, fmt.Errorf("grep: invalid number: %s", numStr)
+						}
 						remaining = remaining[len(numStr):]
 					case 'A':
 						// Parse number that follows
@@ -221,7 +229,9 @@ Options:
 						if numStr == "" {
 							return "", nil, fmt.Errorf("grep: option requires a number: -A")
 						}
-						fmt.Sscanf(numStr, "%d", &opts.after)
+						if _, err := fmt.Sscanf(numStr, "%d", &opts.after); err != nil {
+							return "", nil, fmt.Errorf("grep: invalid number: %s", numStr)
+						}
 						remaining = remaining[len(numStr):]
 					case 'C':
 						// Parse number that follows
@@ -229,7 +239,9 @@ Options:
 						if numStr == "" {
 							return "", nil, fmt.Errorf("grep: option requires a number: -C")
 						}
-						fmt.Sscanf(numStr, "%d", &opts.context)
+						if _, err := fmt.Sscanf(numStr, "%d", &opts.context); err != nil {
+							return "", nil, fmt.Errorf("grep: invalid number: %s", numStr)
+						}
 						remaining = remaining[len(numStr):]
 					default:
 						return "", nil, fmt.Errorf("grep: unknown option: -%c", c)
@@ -367,7 +379,7 @@ func grepPath(v *grasp.VirtualOS, path, displayPath string, re *regexp.Regexp, o
 	if err != nil {
 		return 0, fmt.Errorf("grep: %s: %w", displayPath, err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	count := grepReaderWithCtx(reader, re, opts, displayPath, result, beforeCtx, afterCtx)
 	if opts.count {

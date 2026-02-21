@@ -150,7 +150,7 @@ func TestMCPToolProviderOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open error: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	data, _ := io.ReadAll(f)
 	if len(data) == 0 {
@@ -175,7 +175,7 @@ func TestMCPToolProviderExec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Exec error: %v", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	data, _ := io.ReadAll(rc)
 	if len(data) == 0 {
@@ -265,7 +265,7 @@ func TestMCPResourceProviderOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open error: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	data, _ := io.ReadAll(f)
 	if len(data) == 0 {

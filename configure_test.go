@@ -55,7 +55,7 @@ func TestMountRootFS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open /etc/profile: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "PATH") {
 		t.Errorf("/etc/profile should contain PATH: %q", string(data))
@@ -68,7 +68,9 @@ func TestProcProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("MountRootFS: %v", err)
 	}
-	MountProc(v)
+	if err := MountProc(v); err != nil {
+		t.Fatalf("MountProc: %v", err)
+	}
 
 	ctx := context.Background()
 
@@ -99,7 +101,7 @@ func TestProcProvider(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open /proc/version: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	content := string(data)
 	if !strings.Contains(content, "AgentFS") {

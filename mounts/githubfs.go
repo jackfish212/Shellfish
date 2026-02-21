@@ -448,7 +448,7 @@ func (fs *GitHubFS) getFileContent(ctx context.Context, owner, repo, path string
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("github api error: %s", resp.Status)
@@ -533,7 +533,7 @@ func (fs *GitHubFS) apiGet(ctx context.Context, path string, v interface{}) erro
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return fmt.Errorf("%w: %s", types.ErrNotFound, path)

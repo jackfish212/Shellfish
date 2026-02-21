@@ -66,7 +66,9 @@ Usage: search <query> [--scope <path>] [--max N]
 			case "--max":
 				if i+1 < len(args) {
 					i++
-					fmt.Sscanf(args[i], "%d", &opts.MaxResults)
+					if _, err := fmt.Sscanf(args[i], "%d", &opts.MaxResults); err != nil {
+						return nil, fmt.Errorf("search: invalid max value: %s", args[i])
+					}
 				}
 			}
 		}

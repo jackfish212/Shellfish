@@ -112,7 +112,7 @@ func TestLocalFSOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	data, _ := io.ReadAll(f)
 	if string(data) != "hello world" {

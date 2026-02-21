@@ -103,7 +103,7 @@ func (c *vikingHTTPClient) doRequest(ctx context.Context, method, path string, q
 	if err != nil {
 		return nil, fmt.Errorf("viking: %s %s: %w", method, path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -15,7 +15,9 @@ func setupTestEnv(t *testing.T) (*grasp.VirtualOS, *grasp.Shell) {
 	t.Helper()
 	v := grasp.New()
 	root := mounts.NewMemFS(grasp.PermRW)
-	v.Mount("/", root)
+	if err := v.Mount("/", root); err != nil {
+		t.Fatal(err)
+	}
 	root.AddDir("bin")
 	root.AddDir("usr")
 	root.AddDir("usr/bin")
@@ -44,7 +46,9 @@ func setupTestEnv(t *testing.T) (*grasp.VirtualOS, *grasp.Shell) {
   ]
 }`), grasp.PermRW)
 
-	RegisterBuiltinsOnFS(v, root)
+	if err := RegisterBuiltinsOnFS(v, root); err != nil {
+		t.Fatal(err)
+	}
 
 	sh := v.Shell("tester")
 	return v, sh
@@ -160,7 +164,7 @@ func TestWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "hello from write") {
 		t.Errorf("written content = %q", string(data))
@@ -176,7 +180,7 @@ func TestWriteFromPipe(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "piped data") {
 		t.Errorf("piped content = %q", string(data))
@@ -360,7 +364,7 @@ func TestCpFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("copied file should exist: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "hello world") {
 		t.Errorf("copied content = %q", string(data))
@@ -382,7 +386,7 @@ func TestCpToDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("file copied to directory should exist: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "hello world") {
 		t.Errorf("copied content = %q", string(data))
@@ -399,7 +403,7 @@ func TestCpRecursive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("recursive copy should create nested file: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "README") {
 		t.Errorf("copied content = %q", string(data))
@@ -942,7 +946,7 @@ func TestSedInPlace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if !strings.Contains(string(data), "modified content") {
 		t.Errorf("sed -i should modify file in place: %q", string(data))
@@ -1402,7 +1406,9 @@ func TestSleepNegative(t *testing.T) {
 func TestRegisterBuiltins(t *testing.T) {
 	v := grasp.New()
 	root := mounts.NewMemFS(grasp.PermRW)
-	v.Mount("/", root)
+	if err := v.Mount("/", root); err != nil {
+		t.Fatal(err)
+	}
 
 	// Register builtins at /bin
 	err := RegisterBuiltins(v, "/bin")

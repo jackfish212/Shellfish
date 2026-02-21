@@ -15,7 +15,9 @@ func setupShell(t *testing.T) (*grasp.Shell, *grasp.VirtualOS) {
 	t.Helper()
 	v := grasp.New()
 	root := mounts.NewMemFS(grasp.PermRW)
-	v.Mount("/", root)
+	if err := v.Mount("/", root); err != nil {
+		t.Fatal(err)
+	}
 	root.AddDir("bin")
 	root.AddDir("usr")
 	root.AddDir("usr/bin")
@@ -26,7 +28,9 @@ func setupShell(t *testing.T) (*grasp.Shell, *grasp.VirtualOS) {
 	root.AddFile("home/tester/hello.txt", []byte("hello world"), grasp.PermRW)
 	root.AddDir("tmp")
 
-	builtins.RegisterBuiltinsOnFS(v, root)
+	if err := builtins.RegisterBuiltinsOnFS(v, root); err != nil {
+		t.Fatal(err)
+	}
 
 	sh := v.Shell("tester")
 	return sh, v
@@ -145,7 +149,9 @@ func TestShellPipe(t *testing.T) {
 	sh, v := setupShell(t)
 	ctx := context.Background()
 
-	v.Write(ctx, "/home/tester/multiline.txt", strings.NewReader("line1\nline2\nline3\n"))
+	if err := v.Write(ctx, "/home/tester/multiline.txt", strings.NewReader("line1\nline2\nline3\n")); err != nil {
+		t.Fatal(err)
+	}
 
 	result := sh.Execute(ctx, "cat ~/multiline.txt | head -n 2")
 	lines := strings.Split(strings.TrimSpace(result.Output), "\n")
@@ -314,9 +320,15 @@ func TestShellGlobStar(t *testing.T) {
 	sh, v := setupShell(t)
 	ctx := context.Background()
 
-	v.Write(ctx, "/home/tester/a.txt", strings.NewReader("aaa"))
-	v.Write(ctx, "/home/tester/b.txt", strings.NewReader("bbb"))
-	v.Write(ctx, "/home/tester/c.log", strings.NewReader("ccc"))
+	if err := v.Write(ctx, "/home/tester/a.txt", strings.NewReader("aaa")); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Write(ctx, "/home/tester/b.txt", strings.NewReader("bbb")); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Write(ctx, "/home/tester/c.log", strings.NewReader("ccc")); err != nil {
+		t.Fatal(err)
+	}
 
 	result := sh.Execute(ctx, "echo *.txt")
 	got := strings.TrimSpace(result.Output)
@@ -332,9 +344,15 @@ func TestShellGlobQuestion(t *testing.T) {
 	sh, v := setupShell(t)
 	ctx := context.Background()
 
-	v.Write(ctx, "/home/tester/f1.txt", strings.NewReader(""))
-	v.Write(ctx, "/home/tester/f2.txt", strings.NewReader(""))
-	v.Write(ctx, "/home/tester/f10.txt", strings.NewReader(""))
+	if err := v.Write(ctx, "/home/tester/f1.txt", strings.NewReader("")); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Write(ctx, "/home/tester/f2.txt", strings.NewReader("")); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Write(ctx, "/home/tester/f10.txt", strings.NewReader("")); err != nil {
+		t.Fatal(err)
+	}
 
 	result := sh.Execute(ctx, "echo f?.txt")
 	got := strings.TrimSpace(result.Output)

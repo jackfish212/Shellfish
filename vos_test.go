@@ -16,7 +16,9 @@ func setupVOS(t *testing.T) *VirtualOS {
 	t.Helper()
 	v := New()
 	root := mounts.NewMemFS(PermRW)
-	v.Mount("/", root)
+	if err := v.Mount("/", root); err != nil {
+		t.Fatal(err)
+	}
 	root.AddDir("bin")
 	root.AddDir("home")
 	root.AddDir("home/agent")
@@ -42,8 +44,12 @@ func TestVOSStat(t *testing.T) {
 
 func TestVOSStatVirtualDir(t *testing.T) {
 	v := New()
-	v.Mount("/data", mounts.NewMemFS(PermRW))
-	v.Mount("/tools", mounts.NewMemFS(PermRW))
+	if err := v.Mount("/data", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Mount("/tools", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	entry, err := v.Stat(ctx, "/")
@@ -68,12 +74,16 @@ func TestVOSStatNotFound(t *testing.T) {
 func TestVOSListMergesChildMounts(t *testing.T) {
 	v := New()
 	root := mounts.NewMemFS(PermRW)
-	v.Mount("/", root)
+	if err := v.Mount("/", root); err != nil {
+		t.Fatal(err)
+	}
 	root.AddFile("readme.md", []byte("hi"), PermRO)
 	root.AddDir("data")
 
 	data := mounts.NewMemFS(PermRW)
-	v.Mount("/data", data)
+	if err := v.Mount("/data", data); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	entries, err := v.List(ctx, "/", ListOpts{})
@@ -96,10 +106,16 @@ func TestVOSListMergesChildMounts(t *testing.T) {
 func TestVOSListVirtualDirOnly(t *testing.T) {
 	v := New()
 	root := mounts.NewMemFS(PermRW)
-	v.Mount("/", root)
+	if err := v.Mount("/", root); err != nil {
+		t.Fatal(err)
+	}
 	root.AddDir("data")
-	v.Mount("/data/sub1", mounts.NewMemFS(PermRW))
-	v.Mount("/data/sub2", mounts.NewMemFS(PermRW))
+	if err := v.Mount("/data/sub1", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Mount("/data/sub2", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	entries, err := v.List(ctx, "/data", ListOpts{})
@@ -129,7 +145,7 @@ func TestVOSOpenAndRead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "my notes" {
 		t.Errorf("content = %q", string(data))
@@ -139,7 +155,9 @@ func TestVOSOpenAndRead(t *testing.T) {
 func TestVOSOpenNotReadable(t *testing.T) {
 	v := New()
 	stub := &stubProvider{}
-	v.Mount("/ro", stub)
+	if err := v.Mount("/ro", stub); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	_, err := v.Open(ctx, "/ro/file")
@@ -161,7 +179,7 @@ func TestVOSWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open after Write: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "new content" {
 		t.Errorf("content = %q", string(data))
@@ -170,7 +188,9 @@ func TestVOSWrite(t *testing.T) {
 
 func TestVOSWriteNotWritable(t *testing.T) {
 	v := New()
-	v.Mount("/ro", &stubProvider{})
+	if err := v.Mount("/ro", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	err := v.Write(ctx, "/ro/file", strings.NewReader("data"))
@@ -182,7 +202,9 @@ func TestVOSWriteNotWritable(t *testing.T) {
 func TestVOSExec(t *testing.T) {
 	v := New()
 	fs := mounts.NewMemFS(PermRW)
-	v.Mount("/", fs)
+	if err := v.Mount("/", fs); err != nil {
+		t.Fatal(err)
+	}
 	fs.AddDir("bin")
 
 	fs.AddExecFunc("bin/greet", func(ctx context.Context, args []string, stdin io.Reader) (io.ReadCloser, error) {
@@ -198,7 +220,7 @@ func TestVOSExec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Exec: %v", err)
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	data, _ := io.ReadAll(rc)
 	if string(data) != "hello Alice\n" {
 		t.Errorf("output = %q", string(data))
@@ -207,7 +229,9 @@ func TestVOSExec(t *testing.T) {
 
 func TestVOSExecNotExecutable(t *testing.T) {
 	v := New()
-	v.Mount("/ro", &stubProvider{})
+	if err := v.Mount("/ro", &stubProvider{}); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	_, err := v.Exec(ctx, "/ro/cmd", nil, nil)
@@ -270,11 +294,17 @@ func TestVOSRenameSameMount(t *testing.T) {
 
 func TestVOSRenameCrossMount(t *testing.T) {
 	v := New()
-	v.Mount("/a", mounts.NewMemFS(PermRW))
-	v.Mount("/b", mounts.NewMemFS(PermRW))
+	if err := v.Mount("/a", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
+	if err := v.Mount("/b", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
-	v.Write(ctx, "/a/file.txt", strings.NewReader("data"))
+	if err := v.Write(ctx, "/a/file.txt", strings.NewReader("data")); err != nil {
+		t.Fatal(err)
+	}
 
 	err := v.Rename(ctx, "/a/file.txt", "/b/file.txt")
 	if !errors.Is(err, ErrNotSupported) {
@@ -285,11 +315,15 @@ func TestVOSRenameCrossMount(t *testing.T) {
 func TestVOSSearch(t *testing.T) {
 	v := New()
 	local := mounts.NewMemFS(PermRW)
-	v.Mount("/data", local)
+	if err := v.Mount("/data", local); err != nil {
+		t.Fatal(err)
+	}
 	local.AddFile("report.txt", []byte("quarterly report"), PermRO)
 
 	searchable := mounts.NewLocalFS(t.TempDir(), PermRW)
-	v.Mount("/fs", searchable)
+	if err := v.Mount("/fs", searchable); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	results, err := v.Search(ctx, "report", SearchOpts{Scope: "/data"})
@@ -301,7 +335,9 @@ func TestVOSSearch(t *testing.T) {
 
 func TestVOSSearchNoSearchableProviders(t *testing.T) {
 	v := New()
-	v.Mount("/data", mounts.NewMemFS(PermRW))
+	if err := v.Mount("/data", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	results, err := v.Search(ctx, "anything", SearchOpts{})
@@ -315,7 +351,9 @@ func TestVOSSearchNoSearchableProviders(t *testing.T) {
 
 func TestVOSMountDuplicate(t *testing.T) {
 	v := New()
-	v.Mount("/data", mounts.NewMemFS(PermRW))
+	if err := v.Mount("/data", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
 
 	err := v.Mount("/data", mounts.NewMemFS(PermRW))
 	if !errors.Is(err, ErrAlreadyMounted) {
@@ -325,7 +363,9 @@ func TestVOSMountDuplicate(t *testing.T) {
 
 func TestVOSUnmount(t *testing.T) {
 	v := New()
-	v.Mount("/data", mounts.NewMemFS(PermRW))
+	if err := v.Mount("/data", mounts.NewMemFS(PermRW)); err != nil {
+		t.Fatal(err)
+	}
 
 	err := v.Unmount("/data")
 	if err != nil {
@@ -347,7 +387,7 @@ func TestVOSOpenFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenFile O_RDONLY: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "my notes" {
 		t.Errorf("content = %q", string(data))
@@ -366,14 +406,16 @@ func TestVOSOpenFileWrite(t *testing.T) {
 	if !ok {
 		t.Fatal("writable file should implement io.Writer")
 	}
-	w.Write([]byte("written via OpenFile"))
-	f.Close()
+	if _, err := w.Write([]byte("written via OpenFile")); err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
 
 	f2, err := v.Open(ctx, "/home/agent/writable.txt")
 	if err != nil {
 		t.Fatalf("Open after write: %v", err)
 	}
-	defer f2.Close()
+	defer func() { _ = f2.Close() }()
 	data, _ := io.ReadAll(f2)
 	if string(data) != "written via OpenFile" {
 		t.Errorf("content = %q", string(data))
@@ -426,7 +468,7 @@ func TestVOSMountWithoutPreExistingDir(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open /data/test.txt: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data2, _ := io.ReadAll(f)
 	if string(data2) != "hello" {
 		t.Errorf("content = %q, want hello", string(data2))
@@ -463,7 +505,7 @@ func TestVOSTouch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open after Touch: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, _ := io.ReadAll(f)
 	if string(data) != "my notes" {
 		t.Errorf("content = %q, want 'my notes'", string(data))
@@ -473,7 +515,9 @@ func TestVOSTouch(t *testing.T) {
 func TestVOSTouchNotSupported(t *testing.T) {
 	v := New()
 	// Create a provider that is readable but not writable/touchable
-	v.Mount("/ro", &readOnlyProvider{})
+	if err := v.Mount("/ro", &readOnlyProvider{}); err != nil {
+		t.Fatal(err)
+	}
 
 	ctx := context.Background()
 	err := v.Touch(ctx, "/ro/file")
@@ -535,7 +579,7 @@ func TestVOSWatch(t *testing.T) {
 	}
 
 	// Test double close (should not panic)
-	watcher.Close()
+	_ = watcher.Close()
 }
 
 func TestVOSNotify(t *testing.T) {
@@ -543,7 +587,7 @@ func TestVOSNotify(t *testing.T) {
 
 	// Create a watcher
 	watcher := v.Watch("/", EventAll)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Manually notify an event
 	v.Notify(EventCreate, "/test/path")
@@ -568,7 +612,7 @@ func TestVOSWatchPrefix(t *testing.T) {
 
 	// Watch only /home/agent prefix
 	watcher := v.Watch("/home/agent", EventWrite)
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	// Write to /home/agent/test.txt - should be watched
 	err := v.Write(ctx, "/home/agent/test.txt", strings.NewReader("test"))
