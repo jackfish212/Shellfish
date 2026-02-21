@@ -71,13 +71,13 @@ func TestGitHubFS_List(t *testing.T) {
 		switch r.URL.Path {
 		case "/users/testuser/repos":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`[{"name":"repo1","full_name":"testuser/repo1","description":"repo 1","stargazers_count":10}]`))
+			_, _ = w.Write([]byte(`[{"name":"repo1","full_name":"testuser/repo1","description":"repo 1","stargazers_count":10}]`))
 		case "/repos/owner/repo/contents":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`[{"name":"README.md","path":"README.md","type":"file"},{"name":"src","path":"src","type":"dir"}]`))
+			_, _ = w.Write([]byte(`[{"name":"README.md","path":"README.md","type":"file"},{"name":"src","path":"src","type":"dir"}]`))
 		case "/repos/owner/repo/issues":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`[{"number":1,"title":"Issue 1","state":"open","user":{"login":"user"}}]`))
+			_, _ = w.Write([]byte(`[{"number":1,"title":"Issue 1","state":"open","user":{"login":"user"}}]`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

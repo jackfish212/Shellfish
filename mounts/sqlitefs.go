@@ -129,7 +129,7 @@ func (fs *SQLiteFS) Stat(_ context.Context, path string) (*types.Entry, error) {
 	entry.Meta["version"] = strconv.FormatInt(version, 10)
 
 	if !isDir {
-		fs.db.QueryRow(`SELECT LENGTH(content) FROM files WHERE path = ?`, path).Scan(&entry.Size)
+		_ = fs.db.QueryRow(`SELECT LENGTH(content) FROM files WHERE path = ?`, path).Scan(&entry.Size)
 	}
 
 	return &entry, nil

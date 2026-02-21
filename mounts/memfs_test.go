@@ -124,8 +124,8 @@ func TestMemFSWriteOverwrite(t *testing.T) {
 	fs := NewMemFS(types.PermRW)
 	ctx := context.Background()
 
-	fs.Write(ctx, "file.txt", strings.NewReader("v1"))
-	fs.Write(ctx, "file.txt", strings.NewReader("v2"))
+	_ = fs.Write(ctx, "file.txt", strings.NewReader("v1"))
+	_ = fs.Write(ctx, "file.txt", strings.NewReader("v2"))
 
 	f, _ := fs.Open(ctx, "file.txt")
 	defer f.Close()
@@ -252,7 +252,7 @@ func TestMemFSMkdir(t *testing.T) {
 func TestMemFSMkdirDuplicate(t *testing.T) {
 	fs := NewMemFS(types.PermRW)
 	ctx := context.Background()
-	fs.Mkdir(ctx, "dir", types.PermRWX)
+	_ = fs.Mkdir(ctx, "dir", types.PermRWX)
 
 	err := fs.Mkdir(ctx, "dir", types.PermRWX)
 	if err == nil {

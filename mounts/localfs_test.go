@@ -132,7 +132,9 @@ func TestLocalFSOpenNotFound(t *testing.T) {
 
 func TestLocalFSOpenReadOnly(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0644)
+	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	fs := NewLocalFS(dir, types.PermNone)
 	ctx := context.Background()
@@ -268,7 +270,9 @@ func TestLocalFSSearchMaxResults(t *testing.T) {
 	dir := t.TempDir()
 	for i := 0; i < 5; i++ {
 		name := "match_" + string(rune('a'+i)) + ".txt"
-		os.WriteFile(filepath.Join(dir, name), []byte("x"), 0644)
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0644); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	fs := NewLocalFS(dir, types.PermRW)

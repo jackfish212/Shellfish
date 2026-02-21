@@ -119,7 +119,7 @@ func (c *StdioMCPClient) Initialize(ctx context.Context) (map[string]any, error)
 		JSONRPC: "2.0",
 		Method:  "notifications/initialized",
 	}
-	json.NewEncoder(c.cmdIn).Encode(notif)
+	_ = json.NewEncoder(c.cmdIn).Encode(notif)
 	c.mu.Unlock()
 
 	result, _ := resp.Result.(map[string]any)
