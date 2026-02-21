@@ -114,9 +114,15 @@ func TestSQLiteFSList(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "a.txt", strings.NewReader("a"))
-	fs.Write(ctx, "b.txt", strings.NewReader("b"))
-	fs.Write(ctx, "sub/c.txt", strings.NewReader("c"))
+	if err := fs.Write(ctx, "a.txt", strings.NewReader("a")); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Write(ctx, "b.txt", strings.NewReader("b")); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Write(ctx, "sub/c.txt", strings.NewReader("c")); err != nil {
+		t.Fatal(err)
+	}
 
 	entries, err := fs.List(ctx, "", types.ListOpts{})
 	if err != nil {
@@ -229,8 +235,12 @@ func TestSQLiteFSRemoveRecursive(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Mkdir(ctx, "parent", types.PermRWX)
-	fs.Write(ctx, "parent/child.txt", strings.NewReader("c"))
+	if err := fs.Mkdir(ctx, "parent", types.PermRWX); err != nil {
+		t.Fatal(err)
+	}
+	if err := fs.Write(ctx, "parent/child.txt", strings.NewReader("c")); err != nil {
+		t.Fatal(err)
+	}
 
 	err := fs.Remove(ctx, "parent")
 	if err != nil {
@@ -298,7 +308,9 @@ func TestSQLiteFSPersistence(t *testing.T) {
 		t.Fatalf("NewSQLiteFS: %v", err)
 	}
 	ctx := context.Background()
-	fs1.Write(ctx, "persistent.txt", strings.NewReader("survive restart"))
+	if err := fs1.Write(ctx, "persistent.txt", strings.NewReader("survive restart")); err != nil {
+		t.Fatal(err)
+	}
 	fs1.Close()
 
 	fs2, err := NewSQLiteFS(dbPath, types.PermRW)
@@ -388,7 +400,9 @@ func TestSQLiteFSWriteFileWithMeta(t *testing.T) {
 
 	// Overwrite bumps version, preserves new meta
 	meta2 := map[string]string{"etag": `"def456"`}
-	fs.WriteFile(ctx, "cached.txt", []byte("updated"), meta2)
+	if err := fs.WriteFile(ctx, "cached.txt", []byte("updated"), meta2); err != nil {
+		t.Fatal(err)
+	}
 	entry2, _ := fs.Stat(ctx, "cached.txt")
 	if entry2.Meta["version"] != "2" {
 		t.Errorf("version after update = %q, want 2", entry2.Meta["version"])
@@ -427,7 +441,9 @@ func TestSQLiteFSMetaInOpen(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.WriteFile(ctx, "m.txt", []byte("hello"), map[string]string{"kind": "rss"})
+	if err := fs.WriteFile(ctx, "m.txt", []byte("hello"), map[string]string{"kind": "rss"}); err != nil {
+		t.Fatal(err)
+	}
 
 	f, err := fs.Open(ctx, "m.txt")
 	if err != nil {
@@ -451,7 +467,10 @@ func TestSQLiteFSPurge(t *testing.T) {
 	fs.Write(ctx, "old.txt", strings.NewReader("old"))
 
 	// Backdate the file to 2 hours ago
-	fs.db.Exec(`UPDATE files SET modified = ? WHERE path = 'old.txt'`, time.Now().Add(-2*time.Hour).Unix())
+	_, err := fs.db.Exec(`UPDATE files SET modified = ? WHERE path = 'old.txt'`, time.Now().Add(-2*time.Hour).Unix())
+	if err != nil {
+		t.Fatalf("backdate: %v", err)
+	}
 
 	fs.Write(ctx, "new.txt", strings.NewReader("new"))
 
@@ -503,9 +522,15 @@ func TestSQLiteFSTotalSizeAndCount(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "a.txt", strings.NewReader("hello"))    // 5 bytes
-	fs.Write(ctx, "b.txt", strings.NewReader("world!!"))  // 7 bytes
-	fs.Mkdir(ctx, "dir", types.PermRWX)
+	if err := fs.Write(ctx, "a.txt", strings.NewReader("hello")); err != nil {
+		t.Fatal(err)
+	} // 5 bytes
+	if err := fs.Write(ctx, "b.txt", strings.NewReader("world!!")); err != nil {
+		t.Fatal(err)
+	} // 7 bytes
+	if err := fs.Mkdir(ctx, "dir", types.PermRWX); err != nil {
+		t.Fatal(err)
+	}
 
 	size, err := fs.TotalSize(ctx)
 	if err != nil {

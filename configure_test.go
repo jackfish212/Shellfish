@@ -64,7 +64,10 @@ func TestMountRootFS(t *testing.T) {
 
 func TestProcProvider(t *testing.T) {
 	v := New()
-	MountRootFS(v)
+	_, err := MountRootFS(v)
+	if err != nil {
+		t.Fatalf("MountRootFS: %v", err)
+	}
 	MountProc(v)
 
 	ctx := context.Background()
