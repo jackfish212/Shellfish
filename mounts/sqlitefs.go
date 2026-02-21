@@ -276,7 +276,9 @@ func (fs *SQLiteFS) Write(_ context.Context, path string, r io.Reader) error {
 	path = normPath(path)
 	parent := filepath.Dir(path)
 	if parent != "." && parent != "" {
-		fs.ensureDir(parent)
+		if err := fs.ensureDir(parent); err != nil {
+			return err
+		}
 	}
 
 	_, err = fs.db.Exec(`
@@ -311,11 +313,15 @@ func (fs *SQLiteFS) Remove(_ context.Context, path string) error {
 	path = normPath(path)
 
 	var exists bool
-	fs.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM files WHERE path = ?)`, path).Scan(&exists)
+	if err := fs.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM files WHERE path = ?)`, path).Scan(&exists); err != nil {
+		return fmt.Errorf("remove: %w", err)
+	}
 	if !exists {
 		prefix := path + "/"
 		var count int
-		fs.db.QueryRow(`SELECT COUNT(*) FROM files WHERE path LIKE ?`, prefix+"%").Scan(&count)
+		if err := fs.db.QueryRow(`SELECT COUNT(*) FROM files WHERE path LIKE ?`, prefix+"%").Scan(&count); err != nil {
+			return fmt.Errorf("remove: %w", err)
+		}
 		if count == 0 {
 			return fmt.Errorf("%w: %s", types.ErrNotFound, path)
 		}
@@ -341,7 +347,7 @@ func (fs *SQLiteFS) Rename(_ context.Context, oldPath, newPath string) error {
 	if err != nil {
 		return fmt.Errorf("rename: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.Exec(`UPDATE files SET path = ?, modified = ? WHERE path = ?`, newPath, time.Now().Unix(), oldPath); err != nil {
 		return fmt.Errorf("rename: %w", err)
@@ -369,7 +375,9 @@ func (fs *SQLiteFS) WriteFile(_ context.Context, path string, content []byte, me
 	path = normPath(path)
 	parent := filepath.Dir(path)
 	if parent != "." && parent != "" {
-		fs.ensureDir(parent)
+		if err := fs.ensureDir(parent); err != nil {
+			return err
+		}
 	}
 
 	metaVal := encodeMeta(meta)

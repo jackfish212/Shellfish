@@ -51,7 +51,9 @@ func TestSQLiteFSStat(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "file.txt", strings.NewReader("data"))
+	if err := fs.Write(ctx, "file.txt", strings.NewReader("data")); err != nil {
+		t.Fatal(err)
+	}
 
 	entry, err := fs.Stat(ctx, "file.txt")
 	if err != nil {
@@ -72,7 +74,9 @@ func TestSQLiteFSStatImplicitDir(t *testing.T) {
 	fs := setupSQLiteFS(t)
 	ctx := context.Background()
 
-	fs.Write(ctx, "docs/readme.md", strings.NewReader("hello"))
+	if err := fs.Write(ctx, "docs/readme.md", strings.NewReader("hello")); err != nil {
+		t.Fatal(err)
+	}
 
 	entry, err := fs.Stat(ctx, "docs")
 	if err != nil {

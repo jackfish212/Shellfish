@@ -117,14 +117,14 @@ func TestGitHubFS_Open(t *testing.T) {
 		if r.Header.Get("Accept") == "application/vnd.github.raw+json" {
 			if r.URL.Path == "/repos/owner/repo/contents/README.md" {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("# Test README\n\nThis is a test."))
+				_, _ = w.Write([]byte("# Test README\n\nThis is a test."))
 				return
 			}
 		}
 		switch r.URL.Path {
 		case "/repos/owner/repo/issues/1":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"number":1,"title":"Test Issue","state":"open","body":"Issue body","user":{"login":"user"},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z"}`))
+			_, _ = w.Write([]byte(`{"number":1,"title":"Test Issue","state":"open","body":"Issue body","user":{"login":"user"},"created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T00:00:00Z"}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -172,7 +172,7 @@ func TestGitHubFS_Cache(t *testing.T) {
 		callCount++
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[{"name":"repo","full_name":"user/repo"}]`))
+		_, _ = w.Write([]byte(`[{"name":"repo","full_name":"user/repo"}]`))
 	}))
 	defer server.Close()
 
