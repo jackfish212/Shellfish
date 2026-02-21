@@ -127,4 +127,8 @@ func registerAllBuiltins(v *shellfish.VirtualOS, fs *mounts.MemFS, prefix string
 		Description: "Print newline, word, and byte counts",
 		Usage:       "wc [-l|-w|-m|-c|-L] [FILE]...",
 	})
+	fs.AddExecFunc(prefix+"jsonq", builtinJsonq(v), mounts.FuncMeta{
+		Description: "Query JSON data using gojsonq",
+		Usage:       "jsonq [OPTIONS] [QUERY] [FILE]...",
+	})
 }

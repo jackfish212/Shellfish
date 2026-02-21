@@ -31,6 +31,19 @@ func setupTestEnv(t *testing.T) (*shellfish.VirtualOS, *shellfish.Shell) {
 	root.AddFile("home/tester/docs/readme.md", []byte("# README\nProject docs"), shellfish.PermRO)
 	root.AddFile("home/tester/.hidden", []byte("secret"), shellfish.PermRO)
 
+	// JSON test file for jsonq
+	root.AddFile("home/tester/data.json", []byte(`{
+  "name": "computers",
+  "description": "List of computer products",
+  "prices": [2400, 2100, 1200, 400.87, 89.90, 150.10],
+  "items": [
+    {"id": 1, "name": "MacBook Pro 13", "price": 1350},
+    {"id": 2, "name": "MacBook Pro 15", "price": 1700},
+    {"id": 3, "name": "Sony VAIO", "price": 1200},
+    {"id": 4, "name": "Fujitsu", "price": 850}
+  ]
+}`), shellfish.PermRW)
+
 	RegisterBuiltinsOnFS(v, root)
 
 	sh := v.Shell("tester")
@@ -1137,5 +1150,114 @@ func TestTouchHelp(t *testing.T) {
 	out := run(t, sh, "touch --help")
 	if !strings.Contains(out, "Usage") {
 		t.Errorf("touch --help should show help: %q", out)
+	}
+}
+
+// ─── jsonq ───
+
+func TestJsonqSimplePath(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq "name" ~/data.json`)
+	if !strings.Contains(out, "computers") {
+		t.Errorf("jsonq name should return 'computers': %q", out)
+	}
+}
+
+func TestJsonqNestedPath(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq "items.[0].name" ~/data.json`)
+	if !strings.Contains(out, "MacBook Pro 13") {
+		t.Errorf("jsonq items.[0].name should return first item name: %q", out)
+	}
+}
+
+func TestJsonqFrom(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq --from items --where "price > 1200" ~/data.json`)
+	if !strings.Contains(out, "MacBook Pro") {
+		t.Errorf("jsonq --from items --where should filter results: %q", out)
+	}
+}
+
+func TestJsonqSortBy(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq --from items --sort-by price --sort-order desc ~/data.json`)
+	// MacBook Pro 15 (price 1700) should come first
+	if strings.Index(out, "MacBook Pro 15") > strings.Index(out, "Fujitsu") {
+		t.Errorf("jsonq --sort-by price desc should sort descending: %q", out)
+	}
+}
+
+func TestJsonqPluck(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq --from items --pluck name ~/data.json`)
+	if !strings.Contains(out, "MacBook") {
+		t.Errorf("jsonq --pluck name should return names: %q", out)
+	}
+}
+
+func TestJsonqCount(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq --from items --count ~/data.json`)
+	if !strings.Contains(out, "4") {
+		t.Errorf("jsonq --count should return 4: %q", out)
+	}
+}
+
+func TestJsonqSum(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq --from items --sum price ~/data.json`)
+	if !strings.Contains(out, "5100") {
+		t.Errorf("jsonq --sum price should return 5100: %q", out)
+	}
+}
+
+func TestJsonqAvg(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq --from items --avg price ~/data.json`)
+	if !strings.Contains(out, "1275") {
+		t.Errorf("jsonq --avg price should return 1275: %q", out)
+	}
+}
+
+func TestJsonqLimit(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq --from items --limit 2 ~/data.json`)
+	// Count occurrences of "id" to verify only 2 items
+	count := strings.Count(out, `"id"`)
+	if count != 2 {
+		t.Errorf("jsonq --limit 2 should return 2 items, got %d: %q", count, out)
+	}
+}
+
+func TestJsonqFromPipe(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `cat ~/data.json | jsonq "name"`)
+	if !strings.Contains(out, "computers") {
+		t.Errorf("jsonq from pipe should work: %q", out)
+	}
+}
+
+func TestJsonqRaw(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, `jsonq -r "name" ~/data.json`)
+	if strings.Contains(out, `"`) {
+		t.Errorf("jsonq -r should output raw value without quotes: %q", out)
+	}
+}
+
+func TestJsonqHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "jsonq --help")
+	if code != 1 {
+		t.Errorf("jsonq --help should return exit code 1, got %d", code)
+	}
+}
+
+func TestJsonqNoInput(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "jsonq name")
+	if code == 0 {
+		t.Error("jsonq without input should fail")
 	}
 }
