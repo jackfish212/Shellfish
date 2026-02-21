@@ -176,7 +176,9 @@ func (v *VirtualOS) OpenFile(ctx context.Context, path string, flag OpenFlag) (F
 		if !ok {
 			return nil, fmt.Errorf("%w: %s (provider is not writable)", ErrNotWritable, path)
 		}
-		if entry, statErr := p.Stat(ctx, inner); statErr == nil {
+		entry, statErr := p.Stat(ctx, inner)
+		fileExists := statErr == nil
+		if fileExists {
 			if !entry.Perm.CanWrite() {
 				return nil, fmt.Errorf("%w: %s", ErrNotWritable, path)
 			}
@@ -187,7 +189,14 @@ func (v *VirtualOS) OpenFile(ctx context.Context, path string, flag OpenFlag) (F
 		if rd, ok := p.(Readable); ok {
 			r = rd
 		}
-		return newWritableFile(path, inner, w, flag, r), nil
+		wf := newWritableFile(path, inner, w, flag, r)
+		wf.setOnClose(func(p string, isNew bool) {
+			if isNew {
+				v.hub.emit(EventCreate, p)
+			}
+			v.hub.emit(EventWrite, p)
+		}, fileExists)
+		return wf, nil
 	}
 
 	return nil, fmt.Errorf("%w: invalid open flags for %s", ErrNotSupported, path)

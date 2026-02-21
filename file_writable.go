@@ -9,17 +9,24 @@ import (
 
 // writableFile implements File for write-mode opens.
 type writableFile struct {
-	name   string
-	inner  string
-	w      Writable
-	r      Readable // optional, for O_APPEND: read existing content before write
-	flag   OpenFlag
-	buf    bytes.Buffer
-	closed bool
+	name        string
+	inner       string
+	w           Writable
+	r           Readable // optional, for O_APPEND: read existing content before write
+	flag        OpenFlag
+	buf         bytes.Buffer
+	closed      bool
+	onClose     func(path string, isNew bool) // callback to emit watch events
+	exists      bool                          // whether file existed before open
 }
 
 func newWritableFile(name, inner string, w Writable, flag OpenFlag, r Readable) *writableFile {
 	return &writableFile{name: name, inner: inner, w: w, flag: flag, r: r}
+}
+
+func (f *writableFile) setOnClose(fn func(path string, isNew bool), exists bool) {
+	f.onClose = fn
+	f.exists = exists
 }
 
 func (f *writableFile) Read(p []byte) (int, error) {
@@ -49,7 +56,11 @@ func (f *writableFile) Close() error {
 		}
 	}
 
-	return f.w.Write(ctx, f.inner, reader)
+	err := f.w.Write(ctx, f.inner, reader)
+	if err == nil && f.onClose != nil {
+		f.onClose(f.name, !f.exists)
+	}
+	return err
 }
 
 func (f *writableFile) Stat() (*Entry, error) {
