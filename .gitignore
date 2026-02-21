@@ -40,3 +40,5 @@ Task2.md
 # Environment files
 .env
 *.env.local
+
+*.db
