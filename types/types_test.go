@@ -205,3 +205,48 @@ func TestSearchResult(t *testing.T) {
 		t.Errorf("Snippet = %q", r.Snippet)
 	}
 }
+
+// ─── EventType ───
+
+func TestEventTypeString(t *testing.T) {
+	tests := []struct {
+		event EventType
+		want  string
+	}{
+		{EventCreate, "CREATE"},
+		{EventWrite, "WRITE"},
+		{EventRemove, "REMOVE"},
+		{EventRename, "RENAME"},
+		{EventMkdir, "MKDIR"},
+		{EventAll, "CREATE|WRITE|REMOVE|RENAME|MKDIR"},
+		{EventCreate | EventWrite, "CREATE|WRITE"},
+		{EventType(0), "NONE"},
+	}
+	for _, tt := range tests {
+		got := tt.event.String()
+		if got != tt.want {
+			t.Errorf("EventType(%d).String() = %q, want %q", tt.event, got, tt.want)
+		}
+	}
+}
+
+func TestEventTypeMatches(t *testing.T) {
+	// Test that Matches returns true when the bit is set
+	if !EventCreate.Matches(EventAll) {
+		t.Error("EventCreate should match EventAll")
+	}
+	if !EventWrite.Matches(EventWrite) {
+		t.Error("EventWrite should match EventWrite")
+	}
+	if !EventCreate.Matches(EventCreate | EventWrite) {
+		t.Error("EventCreate should match EventCreate|EventWrite")
+	}
+
+	// Test that Matches returns false when the bit is not set
+	if EventCreate.Matches(EventWrite) {
+		t.Error("EventCreate should not match EventWrite")
+	}
+	if EventType(0).Matches(EventAll) {
+		t.Error("NONE should not match EventAll")
+	}
+}

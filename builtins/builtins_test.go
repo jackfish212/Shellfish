@@ -1261,3 +1261,140 @@ func TestJsonqNoInput(t *testing.T) {
 		t.Error("jsonq without input should fail")
 	}
 }
+
+// ─── wc ───
+
+func TestWcBasic(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "wc ~/notes.txt")
+	if !strings.Contains(out, "3") {
+		t.Errorf("wc should show line count: %q", out)
+	}
+}
+
+func TestWcLines(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "wc -l ~/notes.txt")
+	if !strings.Contains(out, "3") {
+		t.Errorf("wc -l should show 3 lines: %q", out)
+	}
+}
+
+func TestWcWords(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "wc -w ~/notes.txt")
+	if !strings.Contains(out, "9") {
+		t.Errorf("wc -w should show 9 words: %q", out)
+	}
+}
+
+func TestWcBytes(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "wc -c ~/notes.txt")
+	if !strings.Contains(out, "31") {
+		t.Errorf("wc -c should show 31 bytes: %q", out)
+	}
+}
+
+func TestWcChars(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "wc -m ~/notes.txt")
+	if !strings.Contains(out, "31") {
+		t.Errorf("wc -m should show 31 chars: %q", out)
+	}
+}
+
+func TestWcMaxLine(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "wc -L ~/notes.txt")
+	// Should show max line length
+	if !strings.Contains(out, "10") {
+		t.Errorf("wc -L should show max line length: %q", out)
+	}
+}
+
+func TestWcMultipleFiles(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "wc ~/notes.txt ~/data.csv")
+	if !strings.Contains(out, "total") {
+		t.Errorf("wc with multiple files should show total: %q", out)
+	}
+}
+
+func TestWcFromPipe(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "cat ~/notes.txt | wc -l")
+	if !strings.Contains(out, "3") {
+		t.Errorf("wc from pipe should work: %q", out)
+	}
+}
+
+func TestWcHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "wc --help")
+	if code != 1 {
+		t.Errorf("wc --help should return exit code 1, got %d", code)
+	}
+}
+
+func TestWcNoInput(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "wc")
+	if code != 1 {
+		t.Errorf("wc without input should fail, got code %d", code)
+	}
+}
+
+// ─── grep isNumericArg ───
+
+func TestGrepNumericArg(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// Test with -A, -B, -C which have numeric arguments
+	out := run(t, sh, "grep -n -A 1 foo ~/notes.txt")
+	if !strings.Contains(out, "foo") {
+		t.Errorf("grep -A should work: %q", out)
+	}
+}
+
+func TestGrepNumericArgZero(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	// Test with -A 0 (should show 0 lines after)
+	out := run(t, sh, "grep -A 0 foo ~/notes.txt")
+	if strings.Contains(out, "\n") {
+		t.Errorf("grep -A 0 should not show additional lines: %q", out)
+	}
+}
+
+// ─── sleep parseDuration ───
+
+func TestSleepVariousFormats(t *testing.T) {
+	_, sh := setupTestEnv(t)
+
+	// Test sleep with seconds
+	out := run(t, sh, "sleep 0.01")
+	if out != "" {
+		t.Errorf("sleep should produce no output: %q", out)
+	}
+
+	// Test sleep with suffix
+	out = run(t, sh, "sleep 10ms")
+	if out != "" {
+		t.Errorf("sleep with ms suffix should work: %q", out)
+	}
+}
+
+func TestSleepInvalid(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "sleep invalid")
+	if code == 0 {
+		t.Error("sleep with invalid duration should fail")
+	}
+}
+
+func TestSleepNegative(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "sleep -1")
+	if code == 0 {
+		t.Error("sleep with negative duration should fail")
+	}
+}

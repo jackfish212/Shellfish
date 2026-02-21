@@ -200,3 +200,21 @@ func TestGitHubFS_Cache(t *testing.T) {
 		t.Errorf("Cache not working: callCount = %d, expected %d", callCount, firstCount)
 	}
 }
+
+func TestGitHubFS_Search(t *testing.T) {
+	// Test that Search returns error for unsupported scopes
+	fs := NewGitHubFS()
+	ctx := context.Background()
+
+	// Empty scope should fail
+	_, err := fs.Search(ctx, "test", types.SearchOpts{})
+	if err == nil {
+		t.Error("Search with empty scope should fail")
+	}
+
+	// Non-issues scope should fail
+	_, err = fs.Search(ctx, "test", types.SearchOpts{Scope: "/repos/owner/repo"})
+	if err == nil {
+		t.Error("Search with non-issues scope should fail")
+	}
+}

@@ -6,8 +6,10 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackfish212/shellfish/mounts"
+	"github.com/jackfish212/shellfish/types"
 )
 
 func setupVOS(t *testing.T) *VirtualOS {
@@ -428,5 +430,159 @@ func TestVOSMountWithoutPreExistingDir(t *testing.T) {
 	data2, _ := io.ReadAll(f)
 	if string(data2) != "hello" {
 		t.Errorf("content = %q, want hello", string(data2))
+	}
+}
+
+func TestVOSTouch(t *testing.T) {
+	v := setupVOS(t)
+	ctx := context.Background()
+
+	// Test creating a new file with Touch
+	err := v.Touch(ctx, "/home/agent/newfile.txt")
+	if err != nil {
+		t.Fatalf("Touch new file: %v", err)
+	}
+
+	// Verify the file was created
+	entry, err := v.Stat(ctx, "/home/agent/newfile.txt")
+	if err != nil {
+		t.Fatalf("Stat after Touch: %v", err)
+	}
+	if entry.IsDir {
+		t.Error("newfile.txt should not be a directory")
+	}
+
+	// Test touching an existing file
+	err = v.Touch(ctx, "/home/agent/notes.txt")
+	if err != nil {
+		t.Fatalf("Touch existing file: %v", err)
+	}
+
+	// Verify content is preserved
+	f, err := v.Open(ctx, "/home/agent/notes.txt")
+	if err != nil {
+		t.Fatalf("Open after Touch: %v", err)
+	}
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	if string(data) != "my notes" {
+		t.Errorf("content = %q, want 'my notes'", string(data))
+	}
+}
+
+func TestVOSTouchNotSupported(t *testing.T) {
+	v := New()
+	// Create a provider that is readable but not writable/touchable
+	v.Mount("/ro", &readOnlyProvider{})
+
+	ctx := context.Background()
+	err := v.Touch(ctx, "/ro/file")
+	if !errors.Is(err, ErrNotSupported) {
+		t.Errorf("expected ErrNotSupported, got: %v", err)
+	}
+}
+
+// readOnlyProvider implements Provider and Readable but not Writable or Touchable
+type readOnlyProvider struct{}
+
+func (*readOnlyProvider) Stat(ctx context.Context, path string) (*types.Entry, error) {
+	if path == "/" || path == "" {
+		return &types.Entry{Name: "/", IsDir: true, Perm: types.PermRO}, nil
+	}
+	return nil, types.ErrNotFound
+}
+
+func (*readOnlyProvider) List(ctx context.Context, path string, opts types.ListOpts) ([]types.Entry, error) {
+	return nil, nil
+}
+
+func (*readOnlyProvider) Open(ctx context.Context, path string) (types.File, error) {
+	return nil, types.ErrNotFound
+}
+
+func TestVOSWatch(t *testing.T) {
+	v := setupVOS(t)
+	ctx := context.Background()
+
+	// Create a watcher for /home
+	watcher := v.Watch("/home", EventAll)
+	if watcher == nil {
+		t.Fatal("Watch returned nil")
+	}
+
+	// Write a file to trigger event
+	err := v.Write(ctx, "/home/agent/watchtest.txt", strings.NewReader("test"))
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	// Read the event - for new files, both CREATE and WRITE may be emitted
+	select {
+	case ev := <-watcher.Events():
+		if ev.Type != EventWrite && ev.Type != EventCreate {
+			t.Errorf("expected EventWrite or EventCreate, got %v", ev.Type)
+		}
+		if ev.Path != "/home/agent/watchtest.txt" {
+			t.Errorf("expected path /home/agent/watchtest.txt, got %s", ev.Path)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for event")
+	}
+
+	// Test closing the watcher
+	if err := watcher.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	// Test double close (should not panic)
+	watcher.Close()
+}
+
+func TestVOSNotify(t *testing.T) {
+	v := setupVOS(t)
+
+	// Create a watcher
+	watcher := v.Watch("/", EventAll)
+	defer watcher.Close()
+
+	// Manually notify an event
+	v.Notify(EventCreate, "/test/path")
+
+	// Read the event
+	select {
+	case ev := <-watcher.Events():
+		if ev.Type != EventCreate {
+			t.Errorf("expected EventCreate, got %v", ev.Type)
+		}
+		if ev.Path != "/test/path" {
+			t.Errorf("expected path /test/path, got %s", ev.Path)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for event")
+	}
+}
+
+func TestVOSWatchPrefix(t *testing.T) {
+	v := setupVOS(t)
+	ctx := context.Background()
+
+	// Watch only /home/agent prefix
+	watcher := v.Watch("/home/agent", EventWrite)
+	defer watcher.Close()
+
+	// Write to /home/agent/test.txt - should be watched
+	err := v.Write(ctx, "/home/agent/test.txt", strings.NewReader("test"))
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	// Should receive event
+	select {
+	case ev := <-watcher.Events():
+		if ev.Path != "/home/agent/test.txt" {
+			t.Errorf("expected path /home/agent/test.txt, got %s", ev.Path)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for event")
 	}
 }

@@ -279,6 +279,8 @@ func (v *VirtualOS) Remove(ctx context.Context, path string) error
 func (v *VirtualOS) Rename(ctx context.Context, oldPath, newPath string) error
 func (v *VirtualOS) Search(ctx context.Context, query string, opts SearchOpts) ([]SearchResult, error)
 func (v *VirtualOS) Shell(user string) *Shell
+func (v *VirtualOS) Watch(prefix string, mask WatchMask) *Watcher
+func (v *VirtualOS) Notify(path string, mask WatchMask) error
 ```
 
 ---
@@ -316,11 +318,14 @@ func (s *Shell) Cwd() string
 func (s *Shell) History() []string
 func (s *Shell) ClearHistory()
 func (s *Shell) HistorySize() int
+func (s *Shell) OnExec(hook ExecHook)
 
 type ExecResult struct {
     Output string
     Code   int
 }
+
+type ExecHook func(cmdLine string, result *ExecResult)
 
 type ShellEnv struct { /* ... */ }
 
@@ -329,6 +334,40 @@ func (e *ShellEnv) Set(key, value string)
 func (e *ShellEnv) All() map[string]string
 
 const MaxHistorySize = 1000
+```
+
+---
+
+## Watcher (Filesystem Events)
+
+Package: `github.com/jackfish212/shellfish`
+
+```go
+type WatchMask uint32
+
+const (
+    EventCreate WatchMask = 1 << iota
+    EventWrite
+    EventRemove
+    EventMkdir
+    EventRename
+    EventAll    WatchMask = EventCreate | EventWrite | EventRemove | EventMkdir | EventRename
+)
+
+type Watcher struct {
+    Events  chan WatchEvent
+    Errors  chan error
+}
+
+type WatchEvent struct {
+    Path string
+    Type WatchMask
+}
+
+func (v *VirtualOS) Watch(prefix string, mask WatchMask) *Watcher
+func (v *VirtualOS) Notify(path string, mask WatchMask) error
+
+func (w *Watcher) Close() error
 ```
 
 ---
@@ -390,6 +429,41 @@ func (fs *SQLiteFS) Close() error
 // Implements: Provider, Readable, Writable, Mutable, MountInfoProvider
 ```
 
+### GitHubFS
+
+```go
+func NewGitHubFS(opts ...GitHubOption) *GitHubFS
+
+type GitHubOption func(*githubFS)
+
+func WithGitHubToken(token string) GitHubOption
+func WithGitHubUser(user string) GitHubOption
+func WithGitHubBaseURL(url string) GitHubOption
+func WithGitHubCacheTTL(ttl time.Duration) GitHubOption
+
+// Implements: Provider, Readable, Searchable, MountInfoProvider
+```
+
+### HTTPFS
+
+```go
+func NewHTTPFS(perm Perm) *HTTPFS
+
+func (fs *HTTPFS) Add(name, url string, parser ResponseParser)
+
+type ResponseParser interface {
+    Parse(body []byte) ([]ParsedFile, error)
+}
+
+// Built-in parsers:
+//   - RSSParser  — RSS 2.0 and Atom feeds
+//   - JSONParser — JSON responses
+//   - RawParser  — Raw response body
+//   - AutoParser — Auto-detect format
+
+// Implements: Provider, Readable, MountInfoProvider
+```
+
 ### MCP Providers
 
 ```go
@@ -399,6 +473,15 @@ func MountMCP(v interface{ Mount(string, Provider) error }, basePath string, cli
 
 // MCPToolProvider implements: Provider, Readable, Executable, Searchable, MountInfoProvider
 // MCPResourceProvider implements: Provider, Readable, Searchable, MountInfoProvider
+
+// MCP Client interfaces
+func NewStdioMCPClient(cmd string) MCPClient
+func NewHttpMCPClient(url string, opts ...HTTPOption) MCPClient
+
+type HTTPOption func(*httpMCPClient)
+
+func WithBearerToken(token string) HTTPOption
+func WithHTTPTimeout(timeout time.Duration) HTTPOption
 
 type MCPClient interface {
     ListTools(ctx context.Context) ([]MCPTool, error)
@@ -447,6 +530,7 @@ Registered commands (at `/usr/bin/`):
 | `find` | Search directory hierarchy | `-name`, `-type`, `-maxdepth`, `-mindepth`, `-path` |
 | `head` | Output first part of file | `-n` (lines), `-c` (bytes) |
 | `tail` | Output last part of file | `-n` (lines), `-c` (bytes) |
+| `wc` | Count lines, words, and bytes | `-l` (lines), `-w` (words), `-c` (bytes) |
 | `mkdir` | Create directories | `-p` (parents) |
 | `rm` | Remove files/directories | `-r` (recursive), `-f` (force) |
 | `mv` | Move/rename files | — |

@@ -23,9 +23,12 @@ Step-by-step learning for newcomers.
 Practical recipes for common tasks.
 
 - [Create a Custom Provider](how-to/create-provider.md) — Implement your own data source as a mountable provider
+- [Build an Agent with Shell Routing](how-to/build-agent.md) — Create an AI agent that routes `!xxx` to shell, other input to LLM
+- [Reactive Agents with Hooks](how-to/use-hooks.md) — Use Watch and OnExec hooks for contextual assistance
 
 ## Reference — Technical Details
 
 Precise descriptions of APIs and interfaces.
 
 - [Provider Interfaces](reference/interfaces.md) — Complete API reference for all provider interfaces
+- [Built-in Providers](reference/providers.md) — Detailed documentation for all included providers (MemFS, LocalFS, GitHubFS, HTTPFS, MCP, etc.)

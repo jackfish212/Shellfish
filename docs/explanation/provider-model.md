@@ -90,7 +90,7 @@ Agents can reason about what operations are available without trial and error.
 
 ## Built-in Providers
 
-Shellfish ships with several providers:
+Shellfish ships with a comprehensive set of providers:
 
 ### MemFS — In-memory filesystem
 
@@ -130,6 +130,38 @@ fs, _ := mounts.NewSQLiteFS("/var/data/agent.db", shellfish.PermRW)
 v.Mount("/memory", fs)
 ```
 
+### GitHubFS — GitHub API as filesystem
+
+Implements: `Provider`, `Readable`, `Searchable`
+
+Mounts the GitHub API as a navigable filesystem. Browse repositories, read file contents, and access issues through standard filesystem operations.
+
+```go
+fs := mounts.NewGitHubFS(
+    mounts.WithGitHubToken("ghp_xxxx"),
+    mounts.WithGitHubUser("myorg"),
+)
+v.Mount("/github", fs)
+// Now: ls /github/repos/myorg → list repos
+//      cat /github/repos/myorg/myrepo/contents/README.md → read file
+//      cat /github/repos/myorg/myrepo/issues/42 → read issue
+```
+
+### HTTPFS — HTTP endpoints as filesystem
+
+Implements: `Provider`, `Readable`
+
+Maps HTTP endpoints to virtual files with automatic response parsing. Supports RSS/Atom feeds, JSON APIs, and raw content.
+
+```go
+fs := mounts.NewHTTPFS(shellfish.PermRO)
+fs.Add("news", "https://example.com/feed.xml", &mounts.RSSParser{})
+fs.Add("api", "https://api.example.com/data", &mounts.JSONParser{})
+v.Mount("/http", fs)
+// Now: ls /http/news → list feed items
+//      cat /http/news/item-1.txt → read specific item
+```
+
 ### MCP Providers — Bridge to MCP ecosystem
 
 Two variants:
@@ -139,11 +171,32 @@ Two variants:
 
 Both implement: `Provider`, `Readable`, `Searchable`, plus `Executable` (tools only)
 
+Supports both stdio and HTTP transports for MCP servers.
+
 ```go
-toolProvider := mounts.NewMCPToolProvider(mcpClient)
-v.Mount("/tools/notion", toolProvider)
-// Now: ls /tools/notion → lists available Notion tools
-//      /tools/notion/search_pages "query" → executes the MCP tool
+// Stdio transport
+client := mounts.NewStdioMCPClient("npx -y @modelcontextprotocol/server-filesystem /workspace")
+
+// HTTP transport (Streamable HTTP)
+client := mounts.NewHttpMCPClient("https://mcp.example.com",
+    mounts.WithBearerToken("token"))
+
+// Mount tools and resources
+mounts.MountMCP(v, "/mcp", client)
+// Tools at /mcp/tools/, resources at /mcp/data/
+```
+
+### VikingProvider — OpenViking context database
+
+Implements: `Provider`, `Readable`, `Searchable`
+
+Connects to OpenViking for tiered context loading with L0 (abstract), L1 (overview), and L2 (full content) layers.
+
+```go
+fs := mounts.NewVikingProvider(vikingClient, "viking://")
+v.Mount("/ctx", fs)
+// Now: cat /ctx/resources/my_project/.abstract → ~100 tokens
+//      cat /ctx/resources/my_project/.overview → ~2K tokens
 ```
 
 ## The Entry Model

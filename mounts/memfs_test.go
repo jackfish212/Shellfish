@@ -387,3 +387,18 @@ func TestMemFSWriteToFunc(t *testing.T) {
 		t.Error("writing to a func entry should fail")
 	}
 }
+
+func TestNewFuncFS(t *testing.T) {
+	// NewFuncFS is deprecated but should still work
+	fs := NewFuncFS()
+	if fs == nil {
+		t.Error("NewFuncFS returned nil")
+	}
+}
+
+func TestMemFSError(t *testing.T) {
+	err := ErrFuncFailed("test error")
+	if err.Error() != "test error" {
+		t.Errorf("Error() = %q, want %q", err.Error(), "test error")
+	}
+}
