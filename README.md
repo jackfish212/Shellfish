@@ -1,6 +1,7 @@
 # GRASP
 
-> **G**eneral **R**untime for **A**gent **S**hell **P**rimitives
+![Grasp](./Banner.png)
+
 
 **Mount anything, shell everything.** A virtual userland that unifies heterogeneous data sources — files, databases, APIs, memory, tools — into one filesystem namespace. Agents `ls`, `cat`, `grep`, and pipe their way through the world.
 
