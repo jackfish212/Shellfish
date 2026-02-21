@@ -2,13 +2,17 @@ package mounts
 
 import (
 	"context"
+	"database/sql"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackfish212/grasp/types"
+
+	_ "modernc.org/sqlite"
 )
 
 func setupSQLiteFS(t *testing.T) *SQLiteFS {
@@ -329,5 +333,233 @@ func TestSQLiteFSInvalidPath(t *testing.T) {
 	_, err := NewSQLiteFS(filepath.Join(os.DevNull, "impossible", "path.db"), types.PermRW)
 	if err == nil {
 		t.Error("NewSQLiteFS with invalid path should fail")
+	}
+}
+
+func TestSQLiteFSVersion(t *testing.T) {
+	fs := setupSQLiteFS(t)
+	ctx := context.Background()
+
+	fs.Write(ctx, "f.txt", strings.NewReader("v1"))
+	e1, _ := fs.Stat(ctx, "f.txt")
+	if e1.Meta["version"] != "1" {
+		t.Errorf("version after first write = %q, want 1", e1.Meta["version"])
+	}
+
+	fs.Write(ctx, "f.txt", strings.NewReader("v2"))
+	e2, _ := fs.Stat(ctx, "f.txt")
+	if e2.Meta["version"] != "2" {
+		t.Errorf("version after second write = %q, want 2", e2.Meta["version"])
+	}
+
+	fs.Write(ctx, "f.txt", strings.NewReader("v3"))
+	e3, _ := fs.Stat(ctx, "f.txt")
+	if e3.Meta["version"] != "3" {
+		t.Errorf("version after third write = %q, want 3", e3.Meta["version"])
+	}
+}
+
+func TestSQLiteFSWriteFileWithMeta(t *testing.T) {
+	fs := setupSQLiteFS(t)
+	ctx := context.Background()
+
+	meta := map[string]string{"etag": `"abc123"`, "source": "feed"}
+	if err := fs.WriteFile(ctx, "cached.txt", []byte("content"), meta); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	entry, err := fs.Stat(ctx, "cached.txt")
+	if err != nil {
+		t.Fatalf("Stat: %v", err)
+	}
+	if entry.Meta["etag"] != `"abc123"` {
+		t.Errorf("meta etag = %q", entry.Meta["etag"])
+	}
+	if entry.Meta["source"] != "feed" {
+		t.Errorf("meta source = %q", entry.Meta["source"])
+	}
+	if entry.Meta["version"] != "1" {
+		t.Errorf("version = %q, want 1", entry.Meta["version"])
+	}
+
+	// Overwrite bumps version, preserves new meta
+	meta2 := map[string]string{"etag": `"def456"`}
+	fs.WriteFile(ctx, "cached.txt", []byte("updated"), meta2)
+	entry2, _ := fs.Stat(ctx, "cached.txt")
+	if entry2.Meta["version"] != "2" {
+		t.Errorf("version after update = %q, want 2", entry2.Meta["version"])
+	}
+	if entry2.Meta["etag"] != `"def456"` {
+		t.Errorf("updated etag = %q", entry2.Meta["etag"])
+	}
+}
+
+func TestSQLiteFSWriteMeta(t *testing.T) {
+	fs := setupSQLiteFS(t)
+	ctx := context.Background()
+
+	fs.Write(ctx, "f.txt", strings.NewReader("data"))
+
+	err := fs.WriteMeta(ctx, "f.txt", map[string]string{"key": "val"})
+	if err != nil {
+		t.Fatalf("WriteMeta: %v", err)
+	}
+
+	entry, _ := fs.Stat(ctx, "f.txt")
+	if entry.Meta["key"] != "val" {
+		t.Errorf("meta key = %q", entry.Meta["key"])
+	}
+	if entry.Meta["version"] != "1" {
+		t.Errorf("WriteMeta should not bump version, got %q", entry.Meta["version"])
+	}
+
+	err = fs.WriteMeta(ctx, "ghost.txt", map[string]string{"k": "v"})
+	if err == nil {
+		t.Error("WriteMeta on nonexistent file should fail")
+	}
+}
+
+func TestSQLiteFSMetaInOpen(t *testing.T) {
+	fs := setupSQLiteFS(t)
+	ctx := context.Background()
+
+	fs.WriteFile(ctx, "m.txt", []byte("hello"), map[string]string{"kind": "rss"})
+
+	f, err := fs.Open(ctx, "m.txt")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer f.Close()
+
+	entry, _ := f.Stat()
+	if entry.Meta["kind"] != "rss" {
+		t.Errorf("Open meta kind = %q", entry.Meta["kind"])
+	}
+	if entry.Meta["version"] != "1" {
+		t.Errorf("Open meta version = %q", entry.Meta["version"])
+	}
+}
+
+func TestSQLiteFSPurge(t *testing.T) {
+	fs := setupSQLiteFS(t)
+	ctx := context.Background()
+
+	fs.Write(ctx, "old.txt", strings.NewReader("old"))
+
+	// Backdate the file to 2 hours ago
+	fs.db.Exec(`UPDATE files SET modified = ? WHERE path = 'old.txt'`, time.Now().Add(-2*time.Hour).Unix())
+
+	fs.Write(ctx, "new.txt", strings.NewReader("new"))
+
+	n, err := fs.Purge(ctx, 1*time.Hour)
+	if err != nil {
+		t.Fatalf("Purge: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("Purge deleted %d, want 1", n)
+	}
+
+	_, err = fs.Stat(ctx, "old.txt")
+	if err == nil {
+		t.Error("old.txt should be purged")
+	}
+	_, err = fs.Stat(ctx, "new.txt")
+	if err != nil {
+		t.Error("new.txt should survive purge")
+	}
+}
+
+func TestSQLiteFSPurgeByPrefix(t *testing.T) {
+	fs := setupSQLiteFS(t)
+	ctx := context.Background()
+
+	fs.Write(ctx, "feed/a.txt", strings.NewReader("a"))
+	fs.Write(ctx, "feed/b.txt", strings.NewReader("b"))
+	fs.Write(ctx, "other/c.txt", strings.NewReader("c"))
+
+	n, err := fs.PurgeByPrefix(ctx, "feed")
+	if err != nil {
+		t.Fatalf("PurgeByPrefix: %v", err)
+	}
+	if n != 2 {
+		t.Errorf("PurgeByPrefix deleted %d, want 2", n)
+	}
+
+	_, err = fs.Stat(ctx, "feed/a.txt")
+	if err == nil {
+		t.Error("feed/a.txt should be purged")
+	}
+	_, err = fs.Stat(ctx, "other/c.txt")
+	if err != nil {
+		t.Error("other/c.txt should survive")
+	}
+}
+
+func TestSQLiteFSTotalSizeAndCount(t *testing.T) {
+	fs := setupSQLiteFS(t)
+	ctx := context.Background()
+
+	fs.Write(ctx, "a.txt", strings.NewReader("hello"))    // 5 bytes
+	fs.Write(ctx, "b.txt", strings.NewReader("world!!"))  // 7 bytes
+	fs.Mkdir(ctx, "dir", types.PermRWX)
+
+	size, err := fs.TotalSize(ctx)
+	if err != nil {
+		t.Fatalf("TotalSize: %v", err)
+	}
+	if size != 12 {
+		t.Errorf("TotalSize = %d, want 12", size)
+	}
+
+	count, err := fs.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("Count = %d, want 2", count)
+	}
+}
+
+func TestSQLiteFSMigration(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "migrate.db")
+
+	// Create a DB with the old schema (no version column)
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	_, err = db.Exec(`
+		CREATE TABLE files (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			path TEXT UNIQUE NOT NULL,
+			content BLOB,
+			is_dir BOOLEAN NOT NULL DEFAULT 0,
+			perm INTEGER NOT NULL DEFAULT 1,
+			modified INTEGER NOT NULL DEFAULT 0,
+			meta TEXT
+		)`)
+	if err != nil {
+		t.Fatalf("create old schema: %v", err)
+	}
+	_, err = db.Exec(`INSERT INTO files (path, content, perm, modified) VALUES ('legacy.txt', 'old data', 1, 0)`)
+	if err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	db.Close()
+
+	// Reopen via SQLiteFS — migration should add version column
+	fs, err := NewSQLiteFS(dbPath, types.PermRW)
+	if err != nil {
+		t.Fatalf("NewSQLiteFS after migration: %v", err)
+	}
+	defer fs.Close()
+
+	entry, err := fs.Stat(context.Background(), "legacy.txt")
+	if err != nil {
+		t.Fatalf("Stat legacy file: %v", err)
+	}
+	if entry.Meta["version"] != "1" {
+		t.Errorf("migrated version = %q, want 1", entry.Meta["version"])
 	}
 }

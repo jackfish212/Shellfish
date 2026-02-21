@@ -17,13 +17,13 @@ func TestGitHubFS_Stat(t *testing.T) {
 		switch r.URL.Path {
 		case "/repos/owner/repo":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"name":"repo","full_name":"owner/repo","description":"test repo","stargazers_count":100}`))
+			_, _ = w.Write([]byte(`{"name":"repo","full_name":"owner/repo","description":"test repo","stargazers_count":100}`))
 		case "/repos/owner/repo/contents":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`[{"name":"README.md","path":"README.md","type":"file"}]`))
+			_, _ = w.Write([]byte(`[{"name":"README.md","path":"README.md","type":"file"}]`))
 		case "/repos/owner/repo/issues/1":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"number":1,"title":"Test Issue","state":"open","body":"body","user":{"login":"user"}}`))
+			_, _ = w.Write([]byte(`{"number":1,"title":"Test Issue","state":"open","body":"body","user":{"login":"user"}}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

@@ -3,9 +3,11 @@ package mounts
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,12 +54,29 @@ func (fs *SQLiteFS) initDB() error {
 		is_dir BOOLEAN NOT NULL DEFAULT 0,
 		perm INTEGER NOT NULL DEFAULT 1,
 		modified INTEGER NOT NULL DEFAULT 0,
+		version INTEGER NOT NULL DEFAULT 1,
 		meta TEXT
 	);
 	CREATE INDEX IF NOT EXISTS idx_files_path ON files(path);
 	`
-	_, err := fs.db.Exec(schema)
-	return err
+	if _, err := fs.db.Exec(schema); err != nil {
+		return err
+	}
+	return fs.migrate()
+}
+
+// migrate adds columns introduced after the initial schema.
+func (fs *SQLiteFS) migrate() error {
+	var count int
+	if err := fs.db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('files') WHERE name='version'`).Scan(&count); err != nil {
+		return err
+	}
+	if count == 0 {
+		if _, err := fs.db.Exec(`ALTER TABLE files ADD COLUMN version INTEGER NOT NULL DEFAULT 1`); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (fs *SQLiteFS) Close() error { return fs.db.Close() }
@@ -68,9 +87,13 @@ func (fs *SQLiteFS) Stat(_ context.Context, path string) (*types.Entry, error) {
 	var entry types.Entry
 	var permInt int
 	var modified int64
+	var version int64
 	var isDir bool
+	var metaStr sql.NullString
 
-	err := fs.db.QueryRow(`SELECT path, is_dir, perm, modified FROM files WHERE path = ?`, path).Scan(&entry.Path, &isDir, &permInt, &modified)
+	err := fs.db.QueryRow(
+		`SELECT path, is_dir, perm, modified, version, meta FROM files WHERE path = ?`, path,
+	).Scan(&entry.Path, &isDir, &permInt, &modified, &version, &metaStr)
 
 	if err == sql.ErrNoRows {
 		prefix := path + "/"
@@ -99,6 +122,11 @@ func (fs *SQLiteFS) Stat(_ context.Context, path string) (*types.Entry, error) {
 	entry.IsDir = isDir
 	entry.Perm = types.Perm(permInt)
 	entry.Modified = time.Unix(modified, 0)
+	entry.Meta = decodeMeta(metaStr)
+	if entry.Meta == nil {
+		entry.Meta = make(map[string]string)
+	}
+	entry.Meta["version"] = strconv.FormatInt(version, 10)
 
 	if !isDir {
 		fs.db.QueryRow(`SELECT LENGTH(content) FROM files WHERE path = ?`, path).Scan(&entry.Size)
@@ -188,8 +216,12 @@ func (fs *SQLiteFS) Open(_ context.Context, path string) (types.File, error) {
 	var isDir bool
 	var permInt int
 	var modified int64
+	var version int64
+	var metaStr sql.NullString
 
-	err := fs.db.QueryRow(`SELECT content, is_dir, perm, modified FROM files WHERE path = ?`, path).Scan(&content, &isDir, &permInt, &modified)
+	err := fs.db.QueryRow(
+		`SELECT content, is_dir, perm, modified, version, meta FROM files WHERE path = ?`, path,
+	).Scan(&content, &isDir, &permInt, &modified, &version, &metaStr)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("%w: %s", types.ErrNotFound, path)
 	}
@@ -202,7 +234,17 @@ func (fs *SQLiteFS) Open(_ context.Context, path string) (types.File, error) {
 		return nil, fmt.Errorf("%w: %s", types.ErrNotReadable, path)
 	}
 
-	entry := &types.Entry{Name: baseName(path), Path: path, IsDir: isDir, Perm: perm, Size: int64(len(content)), Modified: time.Unix(modified, 0)}
+	meta := decodeMeta(metaStr)
+	if meta == nil {
+		meta = make(map[string]string)
+	}
+	meta["version"] = strconv.FormatInt(version, 10)
+
+	entry := &types.Entry{
+		Name: baseName(path), Path: path, IsDir: isDir,
+		Perm: perm, Size: int64(len(content)),
+		Modified: time.Unix(modified, 0), Meta: meta,
+	}
 	br := newBytesReader(content)
 	return types.NewFile(path, entry, io.NopCloser(br)), nil
 }
@@ -238,8 +280,9 @@ func (fs *SQLiteFS) Write(_ context.Context, path string, r io.Reader) error {
 	}
 
 	_, err = fs.db.Exec(`
-		INSERT INTO files (path, content, is_dir, perm, modified) VALUES (?, ?, 0, ?, ?)
-		ON CONFLICT(path) DO UPDATE SET content = excluded.content, is_dir = excluded.is_dir, perm = excluded.perm, modified = excluded.modified
+		INSERT INTO files (path, content, is_dir, perm, modified, version) VALUES (?, ?, 0, ?, ?, 1)
+		ON CONFLICT(path) DO UPDATE SET content = excluded.content, is_dir = excluded.is_dir,
+			perm = excluded.perm, modified = excluded.modified, version = version + 1
 	`, path, content, int(fs.perm), time.Now().Unix())
 	if err != nil {
 		return fmt.Errorf("writing file: %w", err)
@@ -314,3 +357,106 @@ func (fs *SQLiteFS) Rename(_ context.Context, oldPath, newPath string) error {
 }
 
 func (fs *SQLiteFS) MountInfo() (string, string) { return "sqlitefs", fs.dbPath }
+
+// ─── Extended API (cache-friendly) ───
+
+// WriteFile writes content with metadata in a single operation.
+// The version column is automatically incremented on each write.
+func (fs *SQLiteFS) WriteFile(_ context.Context, path string, content []byte, meta map[string]string) error {
+	if !fs.perm.CanWrite() {
+		return fmt.Errorf("%w: %s", types.ErrNotWritable, path)
+	}
+	path = normPath(path)
+	parent := filepath.Dir(path)
+	if parent != "." && parent != "" {
+		fs.ensureDir(parent)
+	}
+
+	metaVal := encodeMeta(meta)
+	_, err := fs.db.Exec(`
+		INSERT INTO files (path, content, is_dir, perm, modified, version, meta) VALUES (?, ?, 0, ?, ?, 1, ?)
+		ON CONFLICT(path) DO UPDATE SET content = excluded.content, is_dir = excluded.is_dir,
+			perm = excluded.perm, modified = excluded.modified, version = version + 1, meta = excluded.meta
+	`, path, content, int(fs.perm), time.Now().Unix(), metaVal)
+	if err != nil {
+		return fmt.Errorf("writing file: %w", err)
+	}
+	return nil
+}
+
+// WriteMeta updates only the metadata of an existing file without touching
+// content or incrementing the version.
+func (fs *SQLiteFS) WriteMeta(_ context.Context, path string, meta map[string]string) error {
+	if !fs.perm.CanWrite() {
+		return fmt.Errorf("%w: %s", types.ErrNotWritable, path)
+	}
+	path = normPath(path)
+	metaVal := encodeMeta(meta)
+	res, err := fs.db.Exec(`UPDATE files SET meta = ? WHERE path = ?`, metaVal, path)
+	if err != nil {
+		return fmt.Errorf("writing meta: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("%w: %s", types.ErrNotFound, path)
+	}
+	return nil
+}
+
+// Purge deletes non-directory files modified before the given threshold.
+func (fs *SQLiteFS) Purge(_ context.Context, olderThan time.Duration) (int64, error) {
+	threshold := time.Now().Add(-olderThan).Unix()
+	res, err := fs.db.Exec(`DELETE FROM files WHERE is_dir = 0 AND modified < ?`, threshold)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// PurgeByPrefix deletes all entries under a path prefix.
+func (fs *SQLiteFS) PurgeByPrefix(_ context.Context, prefix string) (int64, error) {
+	prefix = normPath(prefix)
+	res, err := fs.db.Exec(`DELETE FROM files WHERE path = ? OR path LIKE ?`, prefix, prefix+"/%")
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// TotalSize returns the sum of content lengths for all non-directory files.
+func (fs *SQLiteFS) TotalSize(_ context.Context) (int64, error) {
+	var size sql.NullInt64
+	err := fs.db.QueryRow(`SELECT SUM(LENGTH(content)) FROM files WHERE is_dir = 0`).Scan(&size)
+	if err != nil {
+		return 0, err
+	}
+	return size.Int64, nil
+}
+
+// Count returns the number of non-directory files.
+func (fs *SQLiteFS) Count(_ context.Context) (int64, error) {
+	var count int64
+	err := fs.db.QueryRow(`SELECT COUNT(*) FROM files WHERE is_dir = 0`).Scan(&count)
+	return count, err
+}
+
+// ─── meta serialization helpers ───
+
+func encodeMeta(meta map[string]string) sql.NullString {
+	if len(meta) == 0 {
+		return sql.NullString{}
+	}
+	data, _ := json.Marshal(meta)
+	return sql.NullString{String: string(data), Valid: true}
+}
+
+func decodeMeta(s sql.NullString) map[string]string {
+	if !s.Valid || s.String == "" {
+		return nil
+	}
+	var m map[string]string
+	if json.Unmarshal([]byte(s.String), &m) != nil {
+		return nil
+	}
+	return m
+}

@@ -173,7 +173,7 @@ func (fs *LocalFS) Search(_ context.Context, query string, opts types.SearchOpts
 	root := fs.hostPath("")
 	lowerQuery := strings.ToLower(query)
 
-	filepath.WalkDir(root, func(hp string, d os.DirEntry, err error) error {
+	_ = filepath.WalkDir(root, func(hp string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}

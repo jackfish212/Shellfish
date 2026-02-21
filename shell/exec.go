@@ -131,7 +131,7 @@ func (s *Shell) executeSingle(ctx context.Context, cmdLine string, stdin io.Read
 		}
 		defer rc.Close()
 		var buf bytes.Buffer
-		io.Copy(&buf, rc)
+		_, _ = io.Copy(&buf, rc)
 		output := buf.String()
 		if redir != nil {
 			return s.writeOutput(ctx, redir, output)
@@ -150,7 +150,7 @@ func (s *Shell) executeSingle(ctx context.Context, cmdLine string, stdin io.Read
 	}
 	defer rc.Close()
 	var buf bytes.Buffer
-	io.Copy(&buf, rc)
+	_, _ = io.Copy(&buf, rc)
 	output := buf.String()
 	if redir != nil {
 		return s.writeOutput(ctx, redir, output)

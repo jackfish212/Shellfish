@@ -15,9 +15,15 @@ func setupLocalFS(t *testing.T) (*LocalFS, string) {
 	t.Helper()
 	dir := t.TempDir()
 
-	os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hello world"), 0644)
-	os.MkdirAll(filepath.Join(dir, "sub"), 0755)
-	os.WriteFile(filepath.Join(dir, "sub", "nested.txt"), []byte("nested"), 0644)
+	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hello world"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "sub"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "sub", "nested.txt"), []byte("nested"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	return NewLocalFS(dir, types.PermRW), dir
 }

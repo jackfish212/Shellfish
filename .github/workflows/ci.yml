@@ -54,13 +54,13 @@ jobs:
           go-version: '1.24.3'
 
       - name: Build
-        run: go build -v ./...
+        run: go build -v ./cmd/...
 
       - name: Build for different platforms
         run: |
-          GOOS=linux GOARCH=amd64 go build -o grasp-linux-amd64 ./...
-          GOOS=darwin GOARCH=amd64 go build -o grasp-darwin-amd64 ./...
-          GOOS=windows GOARCH=amd64 go build -o grasp-windows-amd64.exe ./...
+          GOOS=linux GOARCH=amd64 go build -o grasp-linux-amd64 ./cmd/grasp-server
+          GOOS=darwin GOARCH=amd64 go build -o grasp-darwin-amd64 ./cmd/grasp-server
+          GOOS=windows GOARCH=amd64 go build -o grasp-windows-amd64.exe ./cmd/grasp-server
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

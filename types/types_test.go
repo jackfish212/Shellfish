@@ -150,7 +150,7 @@ func TestNewSeekableFile(t *testing.T) {
 	}
 
 	seeker := f.(io.Seeker)
-	seeker.Seek(0, io.SeekStart)
+	_, _ = seeker.Seek(0, io.SeekStart)
 	data, _ := io.ReadAll(f)
 	if string(data) != content {
 		t.Errorf("after seek, read = %q, want %q", string(data), content)
