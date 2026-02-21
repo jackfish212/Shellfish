@@ -510,6 +510,64 @@ func TestMount(t *testing.T) {
 	}
 }
 
+func TestMountMemFS(t *testing.T) {
+	v, sh := setupTestEnv(t)
+	// Mount a new memfs at /mnt/test
+	run(t, sh, "mkdir /mnt")
+	out := run(t, sh, "mount -t memfs - /mnt/test")
+	if !strings.Contains(out, "Mounted") {
+		t.Errorf("mount should succeed: %q", out)
+	}
+
+	// Verify mount exists
+	ctx := context.Background()
+	entry, err := v.Stat(ctx, "/mnt/test")
+	if err != nil {
+		t.Fatalf("mount point should exist: %v", err)
+	}
+	if !entry.IsDir {
+		t.Error("mount point should be a directory")
+	}
+
+	// Verify it appears in mount list (path may be truncated to 8 chars)
+	out = run(t, sh, "mount")
+	if !strings.Contains(out, "/mnt/tes") {
+		t.Errorf("mount list should show /mnt/test (or truncated): %q", out)
+	}
+}
+
+func TestMountHelp(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	out := run(t, sh, "mount -h")
+	if !strings.Contains(out, "Usage") {
+		t.Errorf("mount -h should show help: %q", out)
+	}
+}
+
+func TestMountMissingType(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "mount /mnt/test")
+	if code == 0 {
+		t.Error("mount without -t should fail")
+	}
+}
+
+func TestMountMissingTarget(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "mount -t memfs -")
+	if code == 0 {
+		t.Error("mount without target should fail")
+	}
+}
+
+func TestMountUnknownType(t *testing.T) {
+	_, sh := setupTestEnv(t)
+	_, code := runCode(t, sh, "mount -t unknownfs - /mnt/test")
+	if code == 0 {
+		t.Error("mount with unknown type should fail")
+	}
+}
+
 // ─── uname ───
 
 func TestUname(t *testing.T) {
