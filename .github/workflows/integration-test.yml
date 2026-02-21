@@ -1,0 +1,139 @@
+name: Daily Integration Test
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+    inputs:
+      model:
+        description: 'Anthropic model to use'
+        required: false
+        default: ''
+        type: string
+
+env:
+  GO_VERSION: '1.24.3'
+
+jobs:
+  integration-test:
+    name: AI Integration Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Don't fail the workflow if issues are found - the agent will create GitHub issues
+    continue-on-error: true
+
+    permissions:
+      # Required for creating issues via GitHub MCP
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download dependencies
+        working-directory: ci/integration-test
+        run: go mod download
+
+      - name: Run AI Integration Test
+        id: run-test
+        working-directory: ci/integration-test
+        env:
+          # GitHub token for MCP authentication (has issues:write permission)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: Custom GitHub MCP URL (defaults to GitHub Copilot MCP)
+          GITHUB_MCP_URL: ${{ secrets.GITHUB_MCP_URL }}
+          # Anthropic API credentials
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
+          ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
+          ANTHROPIC_MODEL: ${{ inputs.model }}
+          # Target repository for issue creation
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "=========================================="
+          echo "Starting AI Integration Test"
+          echo "Date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "Repository: ${{ github.repository }}"
+          echo "=========================================="
+          echo ""
+
+          go run . 2>&1 | tee test-output.log
+
+          echo ""
+          echo "=========================================="
+          echo "Test completed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "=========================================="
+
+      - name: Upload test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-output
+          path: ci/integration-test/test-output.log
+          retention-days: 30
+
+      - name: Create summary
+        if: always()
+        run: |
+          echo "## AI Integration Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f ci/integration-test/test-output.log ]; then
+            echo "### Test Output (last 150 lines)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -150 ci/integration-test/test-output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Notes" >> $GITHUB_STEP_SUMMARY
+          echo "- Issues found during testing are automatically created by the AI agent via GitHub MCP" >> $GITHUB_STEP_SUMMARY
+          echo "- Check the repository Issues for any problems discovered" >> $GITHUB_STEP_SUMMARY
+
+  # Notify only if the workflow itself fails (not test failures)
+  notify-workflow-failure:
+    name: Notify on Workflow Failure
+    runs-on: ubuntu-latest
+    needs: integration-test
+    # Only notify if the job failed due to infrastructure issues, not test failures
+    if: failure() && github.event_name == 'schedule'
+
+    permissions:
+      issues: write
+
+    steps:
+      - name: Create workflow failure issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[CI] Integration Test Workflow Failed - ${date}`,
+              body: `## Workflow Failure
+
+            The daily integration test workflow failed due to an infrastructure issue (not a test failure).
+
+            **Date:** ${date}
+            **Run ID:** ${context.runId}
+            **Link:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+
+            Please investigate the workflow failure.
+
+            ---
+            *This issue was automatically created by the CI workflow.*
+            `,
+              labels: ['ci-failure', 'automated']
+            });
