@@ -13,6 +13,7 @@ type VirtualOS interface {
 	Stat(ctx context.Context, path string) (*types.Entry, error)
 	List(ctx context.Context, path string, opts types.ListOpts) ([]types.Entry, error)
 	Open(ctx context.Context, path string) (types.File, error)
+	OpenFile(ctx context.Context, path string, flag types.OpenFlag) (types.File, error)
 	Write(ctx context.Context, path string, reader io.Reader) error
 	Exec(ctx context.Context, path string, args []string, stdin io.Reader) (io.ReadCloser, error)
 }

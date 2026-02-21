@@ -183,7 +183,11 @@ func (v *VirtualOS) OpenFile(ctx context.Context, path string, flag OpenFlag) (F
 		} else if !flag.Has(O_CREATE) {
 			return nil, fmt.Errorf("%w: %s", ErrNotFound, path)
 		}
-		return newWritableFile(path, inner, w, flag), nil
+		var r Readable
+		if rd, ok := p.(Readable); ok {
+			r = rd
+		}
+		return newWritableFile(path, inner, w, flag, r), nil
 	}
 
 	return nil, fmt.Errorf("%w: invalid open flags for %s", ErrNotSupported, path)

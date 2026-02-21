@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 )
 
 // writableFile implements File for write-mode opens.
@@ -11,13 +12,14 @@ type writableFile struct {
 	name   string
 	inner  string
 	w      Writable
+	r      Readable // optional, for O_APPEND: read existing content before write
 	flag   OpenFlag
 	buf    bytes.Buffer
 	closed bool
 }
 
-func newWritableFile(name, inner string, w Writable, flag OpenFlag) *writableFile {
-	return &writableFile{name: name, inner: inner, w: w, flag: flag}
+func newWritableFile(name, inner string, w Writable, flag OpenFlag, r Readable) *writableFile {
+	return &writableFile{name: name, inner: inner, w: w, flag: flag, r: r}
 }
 
 func (f *writableFile) Read(p []byte) (int, error) {
@@ -37,7 +39,17 @@ func (f *writableFile) Close() error {
 	}
 	f.closed = true
 	ctx := context.Background()
-	return f.w.Write(ctx, f.inner, &f.buf)
+
+	var reader io.Reader = &f.buf
+	if f.flag.Has(O_APPEND) && f.r != nil {
+		if existing, err := f.r.Open(ctx, f.inner); err == nil {
+			data, _ := io.ReadAll(existing)
+			_ = existing.Close()
+			reader = io.MultiReader(bytes.NewReader(data), &f.buf)
+		}
+	}
+
+	return f.w.Write(ctx, f.inner, reader)
 }
 
 func (f *writableFile) Stat() (*Entry, error) {

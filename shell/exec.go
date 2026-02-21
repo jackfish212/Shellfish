@@ -7,6 +7,8 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+
+	"github.com/jackfish212/grasp/types"
 )
 
 func (s *Shell) execEnv() map[string]string {
@@ -162,20 +164,23 @@ func (s *Shell) writeOutput(ctx context.Context, redir *redirection, output stri
 	targetPath := s.absPath(s.expandTilde(s.expandEnvVars(redir.path)))
 	slog.Debug("writeOutput", "path", targetPath, "output", output)
 
-	var r io.Reader
+	flag := types.O_WRONLY | types.O_CREATE
 	if redir.append {
-		if rc, err := s.vos.Open(ctx, targetPath); err == nil {
-			defer rc.Close()
-			existing, _ := io.ReadAll(rc)
-			r = strings.NewReader(string(existing) + output)
-		} else {
-			r = strings.NewReader(output)
-		}
+		flag |= types.O_APPEND
 	} else {
-		r = strings.NewReader(output)
+		flag |= types.O_TRUNC
 	}
-
-	if err := s.vos.Write(ctx, targetPath, r); err != nil {
+	f, err := s.vos.OpenFile(ctx, targetPath, flag)
+	if err != nil {
+		return &ExecResult{Output: fmt.Sprintf("%s: %v\n", targetPath, err), Code: 1}
+	}
+	w, ok := f.(io.Writer)
+	if !ok {
+		_ = f.Close()
+		return &ExecResult{Output: fmt.Sprintf("%s: file not writable\n", targetPath), Code: 1}
+	}
+	_, _ = fmt.Fprint(w, output)
+	if err := f.Close(); err != nil {
 		return &ExecResult{Output: fmt.Sprintf("%s: %v\n", targetPath, err), Code: 1}
 	}
 	return &ExecResult{}

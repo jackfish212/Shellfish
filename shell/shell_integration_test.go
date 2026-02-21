@@ -111,6 +111,49 @@ func (m *mockVirtualOS) Open(ctx context.Context, path string) (types.File, erro
 	return nil, types.ErrNotFound
 }
 
+// mockWritableFile implements types.File and io.Writer for OpenFile in tests.
+type mockWritableFile struct {
+	m    *mockVirtualOS
+	path string
+	flag types.OpenFlag
+	buf  bytes.Buffer
+}
+
+func (f *mockWritableFile) Read(p []byte) (int, error) { return 0, io.EOF }
+func (f *mockWritableFile) Close() error {
+	path := cleanPath(f.path)
+	var r io.Reader = &f.buf
+	if f.flag.Has(types.O_APPEND) {
+		if existing, ok := f.m.files[path]; ok {
+			r = io.MultiReader(bytes.NewReader(existing.content), &f.buf)
+		}
+	}
+	return f.m.Write(context.Background(), path, r)
+}
+func (f *mockWritableFile) Stat() (*types.Entry, error) {
+	parts := strings.Split(f.path, "/")
+	name := parts[len(parts)-1]
+	if name == "" {
+		name = "/"
+	}
+	return &types.Entry{Name: name, Path: f.path, Perm: types.PermRW, Size: int64(f.buf.Len())}, nil
+}
+func (f *mockWritableFile) Name() string { return f.path }
+func (f *mockWritableFile) Write(p []byte) (int, error) { return f.buf.Write(p) }
+
+func (m *mockVirtualOS) OpenFile(ctx context.Context, path string, flag types.OpenFlag) (types.File, error) {
+	path = cleanPath(path)
+	if flag.Has(types.O_WRONLY) || flag.Has(types.O_RDWR) {
+		if !flag.Has(types.O_CREATE) {
+			if _, ok := m.files[path]; !ok {
+				return nil, types.ErrNotFound
+			}
+		}
+		return &mockWritableFile{m: m, path: path, flag: flag}, nil
+	}
+	return m.Open(ctx, path)
+}
+
 func (m *mockVirtualOS) Write(ctx context.Context, path string, reader io.Reader) error {
 	path = cleanPath(path)
 	data, _ := io.ReadAll(reader)
