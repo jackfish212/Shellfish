@@ -30,7 +30,7 @@ import (
 
 	grasp "github.com/jackfish212/grasp"
 	"github.com/jackfish212/grasp/builtins"
-	"github.com/jackfish212/grasp/mcpserver"
+	"github.com/jackfish212/grasp/cmd/grasp-server/mcpserver"
 	"github.com/jackfish212/grasp/mounts"
 )
 

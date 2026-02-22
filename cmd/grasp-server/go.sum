@@ -1,2 +1,4 @@
 github.com/rwtodd/Go.Sed v0.0.0-20250326002959-ba712dc84b62 h1:jFHhEdMblD6cK+qhOJD1smme5YYQp5AkBuBHgTjPBN4=
+github.com/rwtodd/Go.Sed v0.0.0-20250326002959-ba712dc84b62/go.mod h1:c6qgHcSUeSISur4+Kcf3WYTvpL07S8eAsoP40hDiQ1I=
 github.com/thedevsaddam/gojsonq/v2 v2.5.2 h1:CoMVaYyKFsVj6TjU6APqAhAvC07hTI6IQen8PHzHYY0=
+github.com/thedevsaddam/gojsonq/v2 v2.5.2/go.mod h1:bv6Xa7kWy82uT0LnXPE2SzGqTj33TAEeR560MdJkiXs=
