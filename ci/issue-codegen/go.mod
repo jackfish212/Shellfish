@@ -1,4 +1,4 @@
-module github.com/jackfish212/grasp/ci/integration-test
+module github.com/jackfish212/grasp/ci/issue-codegen
 
 go 1.24.3
 
