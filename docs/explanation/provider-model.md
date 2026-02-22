@@ -119,17 +119,6 @@ v.Mount("/projects", fs)
 // Now: cat /projects/readme.md → reads /home/user/projects/readme.md
 ```
 
-### SQLiteFS — Persistent filesystem
-
-Implements: `Provider`, `Readable`, `Writable`, `Mutable`
-
-Stores files and metadata in a SQLite database. Useful for persisting agent memory, session logs, or any data that should survive process restarts without depending on a specific directory structure.
-
-```go
-fs, _ := mounts.NewSQLiteFS("/var/data/agent.db", grasp.PermRW)
-v.Mount("/memory", fs)
-```
-
 ### GitHubFS — GitHub API as filesystem
 
 Implements: `Provider`, `Readable`, `Searchable`

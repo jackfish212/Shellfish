@@ -10,7 +10,6 @@ GRASP ships with a comprehensive set of providers for common use cases. Each pro
 |----------|------------|----------|
 | MemFS | All | In-memory scratch space, custom commands |
 | LocalFS | Read, Write, Search, Mutate | Host filesystem access |
-| SQLiteFS | Read, Write, Mutate | Persistent storage |
 | GitHubFS | Read, Search | GitHub API as filesystem |
 | HTTPFS | Read | HTTP endpoints as filesystem |
 | MCPToolProvider | Read, Exec, Search | MCP tools as executables |
@@ -69,30 +68,6 @@ v.Mount("/projects", fs)
 - Accessing local project files
 - Reading/writing host configuration
 - File-based data pipelines
-
----
-
-## SQLiteFS — Persistent Filesystem
-
-**Interfaces:** Provider, Readable, Writable, Mutable
-
-Stores files and metadata in a SQLite database. Data persists across process restarts.
-
-```go
-fs, err := mounts.NewSQLiteFS("/var/data/agent.db", grasp.PermRW)
-if err != nil {
-    panic(err)
-}
-v.Mount("/memory", fs)
-
-// Data survives restarts
-sh.Execute(ctx, "echo 'remember this' | write /memory/notes.md")
-```
-
-**When to use:**
-- Agent memory that must survive restarts
-- Session logs and audit trails
-- Cross-session state persistence
 
 ---
 

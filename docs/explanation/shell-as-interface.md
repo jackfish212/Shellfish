@@ -119,7 +119,7 @@ $ mount
 /data       localfs     (rw, search, mutable)
 /knowledge  viking      (ro, search)
 /tools      mcp-tools   (ro, exec)
-/memory     sqlitefs    (rw, mutable)
+/memory     dbfs       (rw, mutable)
 ```
 
 The agent learns the environment by exploring it — the same way a developer learns a new system by running `ls` and `cat`.

@@ -377,10 +377,6 @@ func setupAllProviders(v *grasp.VirtualOS) {
     memFS := mounts.NewMemFS(grasp.PermRW)
     v.Mount("/memory", memFS)
 
-    // SQLite persistence
-    sqliteFS, _ := mounts.NewSQLiteFS("agent.db", grasp.PermRW)
-    v.Mount("/persist", sqliteFS)
-
     // GitHub API
     if token := os.Getenv("GITHUB_TOKEN"); token != "" {
         v.Mount("/github", mounts.NewGitHubFS(

@@ -8,7 +8,7 @@
 ```
 /
 ├── data/        → LocalFS (host directory)
-├── memory/      → SQLiteFS (persistent storage)
+├── memory/      → MemFS (in-memory storage)
 ├── tools/mcp/   → MCPToolProvider (external tools)
 ├── knowledge/   → your custom provider
 └── proc/        → ProcProvider (system info)
@@ -42,7 +42,7 @@ The AI agent infrastructure space is growing fast. Here's where GRASP sits:
 | Project | What it is | GRASP difference |
 |---------|-----------|----------------------|
 | **OpenClaw** | Full agent runtime (TS, 182K stars). Gives agents shell, browser, filesystem via built-in tools. | OpenClaw is a complete agent; GRASP is an embeddable layer. OpenClaw's tools are hardcoded to the host OS — GRASP virtualizes and composes across mount points. Can serve as OpenClaw's MCP backend. |
-| **Turso AgentFS** | SQLite-backed agent filesystem (Rust). Copy-on-write isolation, audit logging, single-file snapshots. | AgentFS isolates file access; GRASP unifies heterogeneous sources. AgentFS has no shell, no pipes, no mount composition. Complementary — SQLiteFS could wrap AgentFS. |
+| **Turso AgentFS** | SQLite-backed agent filesystem (Rust). Copy-on-write isolation, audit logging, single-file snapshots. | AgentFS isolates file access; GRASP unifies heterogeneous sources. AgentFS has no shell, no pipes, no mount composition. Complementary — dbfs could wrap AgentFS. |
 | **OpenViking** | Context database (Python, ByteDance). `viking://` protocol, L0/L1/L2 tiered loading, semantic retrieval. | OpenViking is a storage backend with vector search; GRASP is a runtime with shell. Not competitors — OpenViking can be mounted as a GRASP provider, combining semantic retrieval with shell composability. |
 | **ToolFS** | FUSE-based VFS for agents (Go, IceWhaleTech). Unified `/toolfs` namespace, WASM skills, RAG. | Both are Go VFS projects. ToolFS requires FUSE (kernel module); GRASP is pure userspace with protocol-native access (MCP, 9P). ToolFS bundles RAG/skills; GRASP keeps the core minimal and mounts them as providers. |
 | **AIOS** | LLM OS kernel (Python, academic). Agent scheduling, context switching, memory management. | AIOS is a research OS that manages multiple agents; GRASP is a practical runtime for individual agents. AIOS handles scheduling and resource allocation — concerns GRASP intentionally leaves to the host. |
@@ -111,7 +111,6 @@ Providers only implement what they support — no stub methods, no unused interf
 |----------|-------------|-------------|
 | `MemFS` | R/W/X/Mut | In-memory filesystem; register Go functions as commands |
 | `LocalFS` | R/W/S/Mut | Mount a host directory |
-| `SQLiteFS` | R/W/Mut | Persistent filesystem backed by a single SQLite file |
 | `MCPToolProvider` | R/X/S | Bridge MCP server tools as executable entries |
 | `MCPResourceProvider` | R/S | Bridge MCP server resources as readable entries |
 | `VikingProvider` | R/W/S/Mut | Bridge [OpenViking](https://github.com/volcengine/OpenViking) context database with L0/L1/L2 tiered loading |
@@ -183,7 +182,7 @@ Install and run:
 ```bash
 go install github.com/jackfish212/grasp/cmd/grasp-server@latest
 
-grasp-server --mount /data:./workspace --mount /memory:sqlite:memory.db
+grasp-server --mount /data:./workspace --mount /memory:memfs
 ```
 
 Configure in Claude Desktop (`claude_desktop_config.json`) or any MCP client:
@@ -193,7 +192,7 @@ Configure in Claude Desktop (`claude_desktop_config.json`) or any MCP client:
   "mcpServers": {
     "grasp": {
       "command": "grasp-server",
-      "args": ["--mount", "/data:./workspace", "--mount", "/memory:sqlite:memory.db"]
+      "args": ["--mount", "/data:./workspace", "--mount", "/memory:memfs"]
     }
   }
 }
@@ -209,7 +208,6 @@ shell("echo 'task done' >> /memory/log.md")
 
 Mount sources:
 - `--mount /path:./dir` — host directory (LocalFS)
-- `--mount /path:sqlite:file.db` — SQLite database (SQLiteFS)
 - `--mount /path:memfs` — in-memory (MemFS)
 
 ### With OpenViking
@@ -241,13 +239,30 @@ grasp/
 ├── configure.go        # Standard filesystem layout (/bin, /etc, /proc, ...)
 ├── exports.go          # Public API re-exports
 ├── types/              # Core interfaces: Provider, Entry, File, Perm, ...
-├── mounts/             # Built-in providers: MemFS, LocalFS, SQLiteFS, MCP
+├── mounts/             # Built-in providers: MemFS, LocalFS, MCP
 ├── builtins/           # Commands: ls, cat, grep, search, find, ...
 ├── shell/              # Shell: pipes, redirects, env, history, profile
 ├── mcpserver/          # MCP server: expose VirtualOS as MCP tools over stdio
 ├── cmd/grasp-server/   # Standalone MCP server binary
-└── docs/               # Documentation (Diataxis)
+├── docs/               # Documentation
+└── examples/           # Example applications
 ```
+
+## Examples
+
+The [`examples/`](examples/) directory contains complete working examples demonstrating GRASP's capabilities:
+
+| Example | Description | Key Features |
+|---------|-------------|--------------|
+| **[agent-monitor](examples/agent-monitor/)** | AI agent monitors user shell activity and offers contextual help when commands fail or files change | `VOS.Watch()` for file change notifications, `Shell.OnExec()` for command hooks, event-driven agent responses |
+| **[multi-agent](examples/multi-agent/)** | Three agents (Explorer → Architect → Reporter) collaborate through shared filesystem to analyze a codebase | Multi-agent coordination via files, isolated shells with shared mounts, pipeline architecture |
+| **[cached-feeds](examples/cached-feeds/)** | Demonstrates union mount caching with dbfs over httpfs, showing latency improvements and offline resilience | Union mount composition, cache TTL, performance comparison |
+| **[custom-mount](examples/custom-mount/)** | Build a custom provider that bridges external data sources into the VFS | Provider interface implementation, capability-based design |
+| **[full-demo](examples/full-demo/)** | Comprehensive demo showing multiple providers, MCP integration, and shell operations | End-to-end integration example |
+| **[github-mcp](examples/github-mcp/)** | Mount GitHub as an MCP tool provider, exposing repository operations as executable commands | MCP tool bridging, external API integration |
+| **[anthropic](examples/anthropic/)** | Integrate Anthropic's Claude API with GRASP's shell interface | LLM integration, tool use patterns |
+
+Each example includes inline documentation and can be run with `go run ./examples/<name>`.
 
 ## Documentation
 

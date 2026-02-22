@@ -12,7 +12,6 @@ GRASP comes with several built-in filesystem types:
 
 - **memfs**: In-memory filesystem
 - **localfs**: Mount a local directory
-- **sqlitefs**: Mount a SQLite database as filesystem
 - **githubfs**: Mount GitHub API as filesystem
 - **unionfs**: Union/overlay filesystem
 

@@ -123,19 +123,6 @@ Logical operators for conditional execution:
 sh.Execute(ctx, "mkdir /tmp/work && echo 'created' || echo 'failed'")
 ```
 
-## Mounting SQLite for Persistence
-
-```go
-sqlFS, err := mounts.NewSQLiteFS("/var/data/memory.db", grasp.PermRW)
-if err != nil {
-    panic(err)
-}
-v.Mount("/memory", sqlFS)
-
-sh.Execute(ctx, "echo 'remember this' | write /memory/notes.md")
-// Data persists across restarts
-```
-
 ## Multiple Shells
 
 Each `Shell` instance is independent — different working directories, different environment variables, different history. Create one per agent session:

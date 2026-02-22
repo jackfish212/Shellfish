@@ -114,14 +114,6 @@ func setupVirtualOS() *grasp.VirtualOS {
 	memFS.AddFile("readme.txt", []byte("# Welcome to grasp Agent\n\nThis is the in-memory workspace.\n"), grasp.PermRO)
 	v.Mount("/memory", memFS)
 
-	// === SQLite persistence ===
-	sqliteFS, err := mounts.NewSQLiteFS("grasp-demo.db", grasp.PermRW)
-	if err != nil {
-		fmt.Printf("Warning: Could not create SQLiteFS: %v\n", err)
-	} else {
-		v.Mount("/persist", sqliteFS)
-	}
-
 	// === GitHub API ===
 	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
 		githubFS := mounts.NewGitHubFS(
@@ -156,7 +148,6 @@ func (a *Agent) Run(ctx context.Context) {
 	fmt.Println("║  Mount Points:                                                ║")
 	fmt.Println("║    /data     - Local filesystem (read/write)                 ║")
 	fmt.Println("║    /memory   - In-memory workspace (read/write)              ║")
-	fmt.Println("║    /persist  - SQLite storage (survives restarts)            ║")
 
 	if _, err := a.vos.Stat(ctx, "/github"); err == nil {
 		fmt.Println("║    /github   - GitHub API (read-only)                        ║")
@@ -283,7 +274,6 @@ func (a *Agent) chatWithLLM(ctx context.Context, userMessage string) {
 Available mount points:
 - /data - Local project files (read/write)
 - /memory - In-memory workspace (read/write)
-- /persist - Persistent SQLite storage (survives restarts)
 - /github - GitHub API (if configured, read-only)
 
 Shell commands available:
@@ -299,9 +289,8 @@ Use pipes and composition for efficient operations:
 Guidelines:
 1. Explore before modifying: use ls, cat, stat to understand structure
 2. Use /memory for temporary outputs and experiments
-3. Use /persist for data that must survive restarts
-4. Be concise in your responses
-5. When asked to analyze code or files, read them first with shell commands`
+3. Be concise in your responses
+4. When asked to analyze code or files, read them first with shell commands`
 
 	// Call LLM in a loop to handle tool calls
 	for {

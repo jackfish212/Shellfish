@@ -84,7 +84,7 @@ GRASP is the layer *underneath*. It virtualizes the environment: mount multiple 
 
 AgentFS provides SQLite-backed copy-on-write file isolation — one portable file containing the agent's entire state. It's excellent for sandboxing and reproducibility.
 
-GRASP solves a different problem: unifying heterogeneous data sources. AgentFS isolates *one* filesystem; GRASP *composes* many. They're complementary — a SQLiteFS provider could wrap AgentFS as one mount among many.
+GRASP solves a different problem: unifying heterogeneous data sources. AgentFS isolates *one* filesystem; GRASP *composes* many. They're complementary — a dbfs provider could wrap AgentFS as one mount among many.
 
 ### vs. OpenViking
 

@@ -27,7 +27,7 @@ GRASP is designed to be used from any language, any agent framework, through mul
 │                               │                           │
 │               ┌───────┬───────┼───────┬──────┐            │
 │               ▼       ▼       ▼       ▼      ▼            │
-│            MemFS  LocalFS  SQLiteFS  MCP  Viking          │
+│            MemFS  LocalFS  GitHubFS  MCP  Viking          │
 │                                     Provider Provider     │
 └───────────────────────────────────────────────────────────┘
 ```

@@ -9,7 +9,6 @@
 //	--mount PATH:SOURCE   Mount a filesystem (repeatable)
 //	                      SOURCE formats:
 //	                        ./dir           LocalFS (host directory)
-//	                        sqlite:file.db  SQLiteFS (SQLite database)
 //	                        memfs           MemFS (in-memory)
 //	--user  NAME          Shell user name (default: "agent")
 //	--debug               Enable debug logging to stderr
@@ -17,7 +16,7 @@
 //
 // Example:
 //
-//	grasp-server --mount /data:./workspace --mount /memory:sqlite:memory.db
+//	grasp-server --mount /data:./workspace --mount /memory:memfs
 package main
 
 import (
@@ -98,7 +97,6 @@ func main() {
 // Supported SOURCE formats:
 //
 //	memfs            → in-memory MemFS
-//	sqlite:file.db   → SQLiteFS backed by file.db
 //	./dir or /abs    → LocalFS pointing at a host directory
 func mountFromSpec(v *grasp.VirtualOS, spec string) error {
 	idx := strings.Index(spec, ":")
@@ -116,14 +114,6 @@ func mountFromSpec(v *grasp.VirtualOS, spec string) error {
 	switch {
 	case source == "memfs":
 		return v.Mount(mountPath, mounts.NewMemFS(grasp.PermRW))
-
-	case strings.HasPrefix(source, "sqlite:"):
-		dbPath := strings.TrimPrefix(source, "sqlite:")
-		fs, err := mounts.NewSQLiteFS(dbPath, grasp.PermRW)
-		if err != nil {
-			return fmt.Errorf("SQLiteFS %q: %w", dbPath, err)
-		}
-		return v.Mount(mountPath, fs)
 
 	default:
 		return v.Mount(mountPath, mounts.NewLocalFS(source, grasp.PermRW))

@@ -104,18 +104,6 @@ func mountLocalFS(ctx context.Context, v *grasp.VirtualOS, source, target string
 	return v.Mount(target, fs)
 }
 
-func mountSQLiteFS(ctx context.Context, v *grasp.VirtualOS, source, target string, opts map[string]string) error {
-	if source == "" || source == "-" {
-		return fmt.Errorf("sqlitefs requires a database path")
-	}
-	perm := parsePermissions(opts)
-	fs, err := mounts.NewSQLiteFS(source, perm)
-	if err != nil {
-		return fmt.Errorf("failed to create sqlitefs: %w", err)
-	}
-	return v.Mount(target, fs)
-}
-
 func mountGitHubFS(ctx context.Context, v *grasp.VirtualOS, source, target string, opts map[string]string) error {
 	token := opts["token"]
 	user := opts["user"]
@@ -180,13 +168,6 @@ func init() {
 		Description: "Mount a local directory",
 		Usage:       "mount -t localfs /path/to/dir /mnt/local -o ro",
 		Handler:     mountLocalFS,
-	})
-
-	RegisterMountType(MountTypeInfo{
-		Name:        "sqlitefs",
-		Description: "Mount a SQLite database as filesystem",
-		Usage:       "mount -t sqlitefs /path/to/db.sqlite /mnt/db -o rw",
-		Handler:     mountSQLiteFS,
 	})
 
 	RegisterMountType(MountTypeInfo{

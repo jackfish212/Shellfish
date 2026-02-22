@@ -117,7 +117,7 @@ type MountInfoProvider interface {
 }
 ```
 
-Returns a short provider type name (e.g., `"localfs"`, `"sqlite"`, `"viking"`) and optional extra info (e.g., `"path=/workspace"`, `"3 cities"`).
+Returns a short provider type name (e.g., `"localfs"`, `"memfs"`, `"viking"`) and optional extra info (e.g., `"path=/workspace"`, `"3 cities"`).
 
 ---
 
@@ -417,16 +417,6 @@ func (fs *MemFS) RemoveFunc(path string) bool
 func NewLocalFS(root string, perm Perm) *LocalFS
 
 // Implements: Provider, Readable, Writable, Searchable, Mutable, MountInfoProvider
-```
-
-### SQLiteFS
-
-```go
-func NewSQLiteFS(dbPath string, perm Perm) (*SQLiteFS, error)
-
-func (fs *SQLiteFS) Close() error
-
-// Implements: Provider, Readable, Writable, Mutable, MountInfoProvider
 ```
 
 ### GitHubFS
